@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import IntroLogo from "./components/IntroLogo";
+import CPU_Scheduling from "./components/CPU_Scheduling";
 
 function App() {
   const [intro, setIntro] = useState(true);
@@ -12,11 +13,7 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  return intro ? <IntroLogo /> : <MainPage />;
-}
-
-function MainPage() {
-  return <h1>Natatae ako</h1>;
+  return intro ? <IntroLogo /> : <CPU_Scheduling />;
 }
 
 export default App;
