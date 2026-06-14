@@ -1,0 +1,966 @@
+/* ═══════════════════════════════════════════════════
+   Virtual Memory — SImOS Theme
+   Matches CPU Scheduling & Memory Management pages
+═══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap');
+
+/* ── CSS Variables (matching existing pages) ── */
+.vmApp {
+  --bg-page: #F7F9FA;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0f3f5;
+  --bg-inset: #eef1f4;
+
+  --text-primary: #4A5559;
+  --text-heading: #3a4347;
+  --text-secondary: #7a8a90;
+  --text-muted: #a4b0b6;
+  --text-placeholder: #bcc5ca;
+
+  --accent: #3B7A6A;
+  --accent-light: #4a9a86;
+  --accent-lighter: #d0e8e1;
+  --accent-bg: rgba(59, 122, 106, 0.06);
+  --accent-bg-hover: rgba(59, 122, 106, 0.10);
+  --accent-glow: rgba(59, 122, 106, 0.12);
+
+  --purple: #7c5cbf;
+  --purple-bg: rgba(124, 92, 191, 0.06);
+  --purple-border: rgba(124, 92, 191, 0.18);
+
+  --border: #e4e9ec;
+  --border-light: #edf0f3;
+
+  --danger: #d9534f;
+  --danger-bg: rgba(217, 83, 79, 0.06);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 3px rgba(74, 85, 89, 0.04), 0 1px 2px rgba(74, 85, 89, 0.03);
+  --shadow-md: 0 4px 16px rgba(74, 85, 89, 0.06), 0 1px 4px rgba(74, 85, 89, 0.04);
+
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-med: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  min-height: calc(100vh - 100px);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: 0;
+}
+
+/* ── Page Title ── */
+.vmTitle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 24px 0 24px 0;
+}
+
+.vmTitleText {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 2px solid var(--accent-lighter);
+  border-radius: 999px;
+  padding: 10px 36px;
+  background: var(--accent-bg);
+}
+
+/* ── Main Layout ── */
+.vmLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Top row: Configuration + Summary, equal width ── */
+.vmTopRow {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.vmConfigPanel {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ── Summary column ── */
+.vmRight {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Panel (shared card style) ── */
+.vmPanel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.vmVizPanel {
+  animation: fadeSlideUp 0.4s ease;
+}
+
+/* ── Panel header row ── */
+.vmPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.vmPanelTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vmPanelIcon {
+  font-size: 18px;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.vmPanelTitle {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ── Header action buttons ── */
+.vmHeaderActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vmRunBtn {
+  height: 38px;
+  padding: 0 22px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  box-shadow: 0 2px 10px rgba(59, 122, 106, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vmRunBtn:hover {
+  background: var(--accent-light);
+  box-shadow: 0 4px 18px rgba(59, 122, 106, 0.28);
+  transform: translateY(-1px);
+}
+
+.vmStepBtn {
+  height: 38px;
+  padding: 0 18px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+}
+.vmStepBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-lighter);
+  color: var(--text-primary);
+}
+.vmStepBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vmResetBtn {
+  height: 38px;
+  padding: 0 18px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+}
+.vmResetBtn:hover {
+  border-color: rgba(217, 83, 79, 0.3);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* ── Config grid ── */
+.vmConfigGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.vmFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vmFieldGroupFull {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  grid-column: 1 / -1;
+}
+
+.vmLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.vmInput {
+  height: 42px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  transition: var(--transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+.vmInput::placeholder {
+  color: var(--text-placeholder);
+}
+.vmInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.vmSelect {
+  height: 42px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 0 14px;
+  font-size: 13.5px;
+  font-family: inherit;
+  font-weight: 600;
+  outline: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  appearance: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.vmSelect:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.vmHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Workload preset description ── */
+.vmPresetDesc {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-lighter);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 0;
+}
+
+/* ── Simulation speed slider ── */
+.vmSliderRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vmSliderEdgeLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.vmSlider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-inset);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.vmSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px var(--accent-lighter), var(--shadow-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.vmSlider::-webkit-slider-thumb:hover {
+  background: var(--accent-light);
+}
+.vmSlider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px var(--accent-lighter), var(--shadow-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.vmSlider::-moz-range-thumb:hover {
+  background: var(--accent-light);
+}
+.vmSlider::-moz-range-progress {
+  background: var(--accent);
+  height: 6px;
+  border-radius: 999px;
+}
+
+.vmFramesPreview {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--accent-bg);
+  border: 1.5px solid var(--accent-lighter);
+  border-radius: var(--radius-sm);
+}
+.vmFramesCount {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.vmFramesLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.vmError {
+  padding: 12px 16px;
+  background: var(--danger-bg);
+  border: 1.5px solid rgba(217, 83, 79, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Section label ── */
+.vmSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Step badge ── */
+.vmStepBadge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1.5px solid var(--accent-lighter);
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+
+/* ── Frame Grid ── */
+.vmFrameGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.vmFrameCell {
+  width: 72px;
+  height: 72px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-inset);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition-fast);
+}
+
+.vmFrameCellOccupied {
+  border-style: solid;
+  border-width: 2px;
+  animation: frameIn 0.3s ease backwards;
+}
+
+.vmFrameIdx {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.7);
+}
+
+.vmFrameCell:not(.vmFrameCellOccupied) .vmFrameIdx {
+  color: var(--text-muted);
+}
+
+.vmFramePage {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+}
+
+.vmFrameCell:not(.vmFrameCellOccupied) .vmFramePage {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+/* ── Two-col tables ── */
+.vmTablesRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.vmTableBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.vmTableWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: auto;
+}
+
+.vmTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vmTable thead {
+  background: var(--bg-inset);
+}
+
+.vmTable th {
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.vmTable td {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+
+.vmTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vmTable tbody tr:hover {
+  background: var(--bg-inset);
+}
+
+.vmEmptyCell {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 18px !important;
+}
+
+/* ── Page badge ── */
+.vmPageBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  min-width: 34px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── Status badges ── */
+.vmStatus {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.vmStatusPresent {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.vmStatusMissing {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.vmFaultBadge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.vmNoFaultBadge {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Access Log ── */
+.vmLogSection {
+  margin-top: 4px;
+}
+
+.vmLogToggle {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+.vmLogToggle:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-lighter);
+}
+
+.vmFrameState {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vmMiniFrame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════
+   Summary Panel (Right)
+═══════════════════════════════════════ */
+
+.vmSummaryHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 24px 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vmSummaryIcon {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.vmSummaryTitle {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.vmSummaryBody {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Empty state ── */
+.vmEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  gap: 16px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.vmEmptyIcon {
+  opacity: 0.5;
+}
+
+.vmEmptyText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  max-width: 200px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Config tags ── */
+.vmSummaryConfig {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vmConfigTag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-lighter);
+}
+
+/* ── Metrics ── */
+.vmMetrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vmMetric {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vmMetricLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.vmMetricValue {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.vmMetricSub {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.vmMetricFault { color: var(--danger); }
+.vmMetricHit { color: var(--accent); }
+.vmMetricMiss { color: #e8a33c; }
+.vmMetricRatio { color: var(--purple); }
+
+/* ── Ratio bars ── */
+.vmRatioSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vmRatioLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.vmRatioBar {
+  height: 8px;
+  background: var(--bg-inset);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.vmRatioFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vmRatioFault {
+  background: var(--danger);
+}
+
+/* ── Legend ── */
+.vmLegendSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.vmLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vmLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.vmLegendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vmLegendLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ── Step controls (in summary) ── */
+.vmStepControls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vmStepRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vmStepInfo {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.vmCtrlBtn {
+  height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.vmCtrlBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-lighter);
+  color: var(--text-primary);
+}
+.vmCtrlBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vmCtrlBtnSecondary {
+  height: 32px;
+  width: 100%;
+  border: 1.5px solid var(--accent-lighter);
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  margin-top: 4px;
+}
+.vmCtrlBtnSecondary:hover:not(:disabled) {
+  background: var(--accent-bg-hover);
+}
+.vmCtrlBtnSecondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vmCtrlBtnActive {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.vmCtrlBtnActive:hover:not(:disabled) {
+  background: var(--accent-light);
+}
+
+/* ── Animations ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes frameIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .vmTopRow {
+    flex-direction: column;
+  }
+
+  .vmRight {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .vmMetrics {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .vmConfigGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .vmFieldGroupFull {
+    grid-column: auto;
+  }
+
+  .vmTablesRow {
+    grid-template-columns: 1fr;
+  }
+
+  .vmMetrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .vmHeaderActions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .vmPanel {
+    padding: 18px;
+  }
+
+  .vmMetrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .vmFrameCell {
+    width: 58px;
+    height: 58px;
+  }
+}
