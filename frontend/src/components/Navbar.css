@@ -1,0 +1,219 @@
+/* ── Header bar ── */
+.nav-header {
+  height: 72px;
+  background: #fff;
+  border: 1px solid #e4e9ec;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  box-shadow: 0 1px 3px rgba(74, 85, 89, 0.04);
+}
+
+.nav-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-menu-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 6px 10px;
+  transition: background 0.18s;
+}
+
+.nav-menu-btn:hover {
+  background: #eef1f4;
+}
+
+.nav-logo {
+  font-family: "Outfit", sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  color: #3a4347;
+  line-height: 1;
+  margin: 0;
+}
+
+.nav-logo span {
+  color: #3b7a6a;
+}
+
+.nav-subtitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #a4b0b6;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.nav-version {
+  font-size: 11px;
+  color: #3b7a6a;
+  background: rgba(59, 122, 106, 0.06);
+  border: 1px solid #e4e9ec;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Top-right nav links ── */
+.nav-links {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.nav-links button {
+  background: transparent;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #7a8a90;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: background 0.18s, color 0.18s;
+}
+
+.nav-links button:hover {
+  background: #f0f3f5;
+  color: #4a5559;
+}
+
+.nav-theme-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #eef1f4 !important;
+  border: 1px solid #e4e9ec !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  padding: 0 !important;
+}
+
+/* ── Overlay ── */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 998;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Drawer ── */
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: #fff;
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer.open {
+  transform: translateX(0);
+  box-shadow: 4px 0 24px rgba(74, 85, 89, 0.10);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e4e9ec;
+}
+
+.drawer-title {
+  font-family: "Outfit", sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #3a4347;
+  margin: 0;
+}
+
+.drawer-title span {
+  color: #3b7a6a;
+}
+
+.drawer-close {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+}
+
+.drawer-close:hover {
+  background: #eef1f4;
+}
+
+/* ── Drawer navigation ── */
+.drawer-nav {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drawer-link {
+  text-align: left;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7a8a90;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-link:hover {
+  background: #f0f3f5;
+  color: #4a5559;
+}
+
+.drawer-link.active {
+  background: rgba(59, 122, 106, 0.06);
+  color: #3b7a6a;
+}
+
+.drawer-link-icon {
+  font-size: 18px;
+}

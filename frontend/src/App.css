@@ -1,1 +1,9 @@
-/* App-level styles are handled by component CSS */
+/* App shell layout */
+.app-shell {
+  min-height: 100vh;
+  background: #F7F9FA;
+}
+
+.app-page {
+  padding: 0 24px 24px 24px;
+}

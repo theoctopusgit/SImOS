@@ -145,24 +145,6 @@ function CPU_Scheduling() {
   /* ═══════ Render ═══════ */
   return (
     <div className="cpu-app">
-      {/* Header */}
-      <header className="cpu-header">
-        <div className="cpu-logo-section">
-          <button className="cpu-menu-btn" type="button">☰</button>
-          <div>
-            <h1 className="cpu-logo">SIm<span>OS</span></h1>
-            <p className="cpu-subtitle">CPU Scheduling Simulation</p>
-          </div>
-          <span className="cpu-version">v1.0</span>
-        </div>
-        <nav className="cpu-nav">
-          <button type="button">GitHub</button>
-          <button type="button">Docs</button>
-          <button type="button">About</button>
-          <button type="button" className="cpu-theme-toggle">◐</button>
-        </nav>
-      </header>
-
       {/* Tabs */}
       <div className="cpu-tabs">
         <button type="button" className="cpu-tab active">Algorithm Simulation</button>
