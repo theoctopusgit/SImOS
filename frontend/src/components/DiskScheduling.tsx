@@ -8,10 +8,10 @@ interface SeekMovement {
   distance: number;
 }
 
-type DiskAlgorithm = "CHOOSE" | "FCFS" | "SSTF" | "SCAN" | "C-SCAN";
+type DiskAlgorithm = "CHOOSE ALGORITHM" | "FCFS" | "SSTF" | "SCAN" | "C-SCAN";
 
 const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
-  { label: "Choose Algorithm", value: "CHOOSE", abbr: "None" },
+  { label: "Choose Algorithm", value: "CHOOSE ALGORITHM", abbr: "None" },
   { label: "First Come, First Served", value: "FCFS", abbr: "FCFS" },
   { label: "Shortest Seek Time First", value: "SSTF", abbr: "SSTF" },
   { label: "SCAN / Elevator", value: "SCAN", abbr: "SCAN" },
@@ -19,6 +19,17 @@ const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
 ];
 
 const DISK_MIN = 0;
+
+const STEP_COLORS = [
+  "#4a6cf7", // blue
+  "#7c5cbf", // purple
+  "#3B7A6A", // teal/green
+  "#e8a33c", // orange/yellow
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#10b981", // emerald green
+];
 
 function parseQueue(input: string): number[] {
   return input
@@ -122,7 +133,7 @@ function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[]
 }
 
 export const DiskScheduling: React.FC = () => {
-  const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE");
+  const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE ALGORITHM");
   const [queueInput, setQueueInput] = useState<string>("");
   const [initialHead, setInitialHead] = useState<number>(53);
   const [maxTrack, setMaxTrack] = useState<number>(199);
@@ -140,7 +151,7 @@ export const DiskScheduling: React.FC = () => {
   function handleExecuteRun(e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
 
-    if (algorithm === "CHOOSE") {
+    if (algorithm === "CHOOSE ALGORITHM") {
       if (!isMount) {
         alert("Please select a disk scheduling algorithm.");
       }
@@ -150,7 +161,8 @@ export const DiskScheduling: React.FC = () => {
     const parsedQueue = parseQueue(queueInput);
     const safeHead = Math.max(DISK_MIN, initialHead || 0);
 
-    const computedMaxTrack = Math.max(199, safeHead, ...parsedQueue);
+    const maxInput = Math.max(safeHead, ...parsedQueue);
+    const computedMaxTrack = maxInput > 199 ? Math.ceil(maxInput / 50) * 50 : 199;
     setMaxTrack(computedMaxTrack);
 
     const computedSequence = computeSequence(algorithm, safeHead, parsedQueue, computedMaxTrack);
@@ -285,7 +297,7 @@ export const DiskScheduling: React.FC = () => {
       <div className="disk-content">
         <aside className="disk-sidebar">
           <h3>Select Algorithm</h3>
-          {ALGORITHMS.filter(function (item) { return item.value !== "CHOOSE"; }).map(function (item) {
+          {ALGORITHMS.filter(function (item) { return item.value !== "CHOOSE ALGORITHM"; }).map(function (item) {
             return (
               <button
                 key={item.value}
@@ -307,7 +319,7 @@ export const DiskScheduling: React.FC = () => {
           <section className="disk-panel">
             <div className="disk-panel-header">
               <div>
-                <h2>Disk Request Manager</h2>
+                <h2>Mass Storage Manager</h2>
                 <p>Configure the queue, choose an algorithm, and simulate head movement</p>
               </div>
               <div className="disk-controls">
@@ -316,7 +328,7 @@ export const DiskScheduling: React.FC = () => {
                   className="disk-ctrl-btn"
                   onClick={function () {
                     setQueueInput("98, 183, 37, 122, 14, 124, 65, 67");
-                    setInitialHead(53);
+                    setInitialHead(0);
                     setAlgorithm("FCFS");
                     setHasRun(false);
                   }}
@@ -329,7 +341,7 @@ export const DiskScheduling: React.FC = () => {
                   onClick={function () {
                     setQueueInput("");
                     setInitialHead(0);
-                    setAlgorithm("CHOOSE");
+                    setAlgorithm("CHOOSE ALGORITHM");
                     setSequence([]);
                     setMovements([]);
                     setTotalMovement(0);
@@ -456,7 +468,6 @@ export const DiskScheduling: React.FC = () => {
                       <tr>
                         <th>Step</th>
                         <th>Head Seek Path</th>
-                        <th>Formula</th>
                         <th>Seek Distance</th>
                       </tr>
                     </thead>
@@ -464,7 +475,13 @@ export const DiskScheduling: React.FC = () => {
                       {movements.map(function (move) {
                         return (
                           <tr key={move.step + "-" + move.from + "-" + move.to}>
-                            <td>S{move.step}</td>
+                            <td className="disk-step-cell">
+                              <span
+                                className="step-bullet"
+                                style={{ backgroundColor: STEP_COLORS[(move.step - 1) % STEP_COLORS.length] }}
+                              />
+                              S{move.step}
+                            </td>
                             <td>
                               <span className="disk-path-text">
                                 <span className="disk-track-pill">{move.from}</span>
@@ -472,7 +489,6 @@ export const DiskScheduling: React.FC = () => {
                                 <span className="disk-track-pill">{move.to}</span>
                               </span>
                             </td>
-                            <td>|{move.to} - {move.from}|</td>
                             <td className="disk-distance-cell">{move.distance} tracks</td>
                           </tr>
                         );
@@ -480,7 +496,7 @@ export const DiskScheduling: React.FC = () => {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={3} className="disk-foot-label">Total Head Movement</td>
+                        <td colSpan={2} className="disk-foot-label">Total Head Movement</td>
                         <td className="disk-foot-total">{totalMovement} tracks</td>
                       </tr>
                     </tfoot>
