@@ -8,7 +8,7 @@ interface SeekMovement {
   distance: number;
 }
 
-type DiskAlgorithm = "CHOOSE ALGORITHM" | "FCFS" | "SSTF" | "SCAN" | "C-SCAN";
+type DiskAlgorithm = "CHOOSE ALGORITHM" | "FCFS" | "SSTF" | "SCAN" | "C-SCAN" | "LOOK" | "C-LOOK";
 
 const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
   { label: "Choose Algorithm", value: "CHOOSE ALGORITHM", abbr: "None" },
@@ -16,6 +16,8 @@ const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
   { label: "Shortest Seek Time First", value: "SSTF", abbr: "SSTF" },
   { label: "SCAN / Elevator", value: "SCAN", abbr: "SCAN" },
   { label: "Circular SCAN", value: "C-SCAN", abbr: "C-SCAN" },
+  { label: "LOOK", value: "LOOK", abbr: "LOOK" },
+  { label: "Circular LOOK", value: "C-LOOK", abbr: "C-LOOK" },
 ];
 
 const DISK_MIN = 0;
@@ -135,8 +137,8 @@ function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[]
 export const DiskScheduling: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE ALGORITHM");
   const [queueInput, setQueueInput] = useState<string>("");
-  const [initialHead, setInitialHead] = useState<number>(0);
-  const [displayedInitialHead, setDisplayedInitialHead] = useState<number>(0);
+  const [initialHead, setInitialHead] = useState<number | "">(53);
+  const [displayedInitialHead, setDisplayedInitialHead] = useState<number | "">(53);
   const [maxTrack, setMaxTrack] = useState<number>(199);
   const [sequence, setSequence] = useState<number[]>([]);
   const [movements, setMovements] = useState<SeekMovement[]>([]);
@@ -160,7 +162,7 @@ export const DiskScheduling: React.FC = () => {
     }
 
     const parsedQueue = parseQueue(queueInput);
-    const safeHead = Math.max(DISK_MIN, initialHead || 0);
+    const safeHead = Math.max(DISK_MIN, initialHead === "" ? 53 : initialHead);
 
     const maxInput = Math.max(safeHead, ...parsedQueue);
     const computedMaxTrack = maxInput > 199 ? Math.ceil(maxInput / 50) * 50 : 199;
@@ -297,26 +299,6 @@ export const DiskScheduling: React.FC = () => {
       </div>
 
       <div className="disk-content">
-        <aside className="disk-sidebar">
-          <h3>Select Algorithm</h3>
-          {ALGORITHMS.filter(function (item) { return item.value !== "CHOOSE ALGORITHM"; }).map(function (item) {
-            return (
-              <button
-                key={item.value}
-                type="button"
-                className={"disk-algo-card" + (algorithm === item.value ? " selected" : "")}
-                onClick={function () {
-                  setAlgorithm(item.value);
-                  setHasRun(false);
-                }}
-              >
-                {item.label}
-                <span className="disk-algo-abbr">{item.abbr}</span>
-              </button>
-            );
-          })}
-        </aside>
-
         <div className="disk-main">
           <section className="disk-panel">
             <div className="disk-panel-header">
@@ -330,7 +312,7 @@ export const DiskScheduling: React.FC = () => {
                   className="disk-ctrl-btn"
                   onClick={function () {
                     setQueueInput("98, 183, 37, 122, 14, 124, 65, 67");
-                    setInitialHead(0);
+                    setInitialHead(53);
                     setAlgorithm("FCFS");
                     setHasRun(false);
                   }}
@@ -342,8 +324,8 @@ export const DiskScheduling: React.FC = () => {
                   className="disk-ctrl-btn danger-btn"
                   onClick={function () {
                     setQueueInput("");
-                    setInitialHead(0);
-                    setDisplayedInitialHead(0);
+                    setInitialHead(53);
+                    setDisplayedInitialHead(53);
                     setAlgorithm("CHOOSE ALGORITHM");
                     setSequence([]);
                     setMovements([]);
@@ -392,7 +374,13 @@ export const DiskScheduling: React.FC = () => {
                   min={DISK_MIN}
                   value={initialHead}
                   onChange={function (e) {
-                    setInitialHead(parseInt(e.target.value, 10) || 0);
+                    const val = e.target.value;
+                    if (val === "") {
+                      setInitialHead("");
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      setInitialHead(isNaN(parsed) ? "" : parsed);
+                    }
                     setHasRun(false);
                   }}
                   placeholder="e.g. 53"
@@ -411,8 +399,6 @@ export const DiskScheduling: React.FC = () => {
                   placeholder="e.g. 98, 183, 37, 122, 14, 124, 65, 67"
                 />
               </div>
-
-              <button type="submit" className="disk-add-btn">+</button>
             </form>
 
             <div className="disk-summary-grid">
