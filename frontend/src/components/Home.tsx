@@ -115,32 +115,13 @@ function Home() {
             <span className={styles.heroCtaArrow}>↓</span>
           </button>
           <a
-            className={styles.heroGhost}
-            href="https://github.com/RodneyGG/SImOS"
-            target="_blank"
-            rel="noreferrer"
+        
           >
-            View on GitHub
+          
           </a>
         </div>
 
-        {/* Decorative stat chips */}
-        <div className={styles.heroStats}>
-          <div className={styles.heroStat}>
-            <span className={styles.heroStatNum}>4</span>
-            <span className={styles.heroStatLabel}>Simulations</span>
-          </div>
-          <div className={styles.heroStatDivider} />
-          <div className={styles.heroStat}>
-            <span className={styles.heroStatNum}>12+</span>
-            <span className={styles.heroStatLabel}>Algorithms</span>
-          </div>
-          <div className={styles.heroStatDivider} />
-          <div className={styles.heroStat}>
-            <span className={styles.heroStatNum}>Real-Time</span>
-            <span className={styles.heroStatLabel}>Visualization</span>
-          </div>
-        </div>
+
       </section>
 
       {/* ── Simulations Grid ── */}
