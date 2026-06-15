@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "CPU Scheduling", path: "/cpu-scheduling", icon: "" },
   { label: "Memory Management", path: "/memory-management", icon: "" },
   { label: "Virtual Memory", path: "/virtual-memory", icon: "" },
+  { label: "Disk Scheduling", path: "/mass-storage", icon: "" },
 ];
 
 function Navbar() {

@@ -53,7 +53,7 @@ const SIMULATIONS = [
     tags: ["FCFS", "SSTF", "SCAN", "C-SCAN", "LOOK"],
     tagColor: "#e8a33c",
     tagBg: "rgba(232,163,60,0.08)",
-    status: "coming",
+    status: "ready",
   },
 ];
 
