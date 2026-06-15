@@ -39,30 +39,7 @@ type AlgorithmName = (typeof ALGORITHMS)[number]["name"];
 const COLORS = 8;
 const colorIndex = (i: number) => i % COLORS;
 
-/* ── Single predefined demo result (visual only) ── */
-const DEMO_GANTT: GanttBlock[] = [
-  { pid: "P1", start: 0, end: 6 },
-  { pid: "P2", start: 6, end: 14 },
-  { pid: "P3", start: 14, end: 17 },
-  { pid: "P4", start: 17, end: 21 },
-];
 
-const DEMO_DETAILS: ProcessResult[] = [
-  { id: "P1", arrivalTime: 0, burstTime: 6, startTime: 0, completionTime: 6, waitingTime: 0, turnaroundTime: 6 },
-  { id: "P2", arrivalTime: 1, burstTime: 8, startTime: 6, completionTime: 14, waitingTime: 5, turnaroundTime: 13 },
-  { id: "P3", arrivalTime: 2, burstTime: 3, startTime: 14, completionTime: 17, waitingTime: 12, turnaroundTime: 15 },
-  { id: "P4", arrivalTime: 3, burstTime: 4, startTime: 17, completionTime: 21, waitingTime: 14, turnaroundTime: 18 },
-];
-
-const DEMO_RESULT = {
-  gantt: DEMO_GANTT,
-  details: DEMO_DETAILS,
-  avgWaiting: 7.75,
-  avgTurnaround: 13.0,
-};
-
-/* ── Gantt color map (fixed to P1-P4) ── */
-const GANTT_COLOR_MAP = new Map([["P1", 0], ["P2", 1], ["P3", 2], ["P4", 3]]);
 
 /* ═══════════════════════════════════════════════════
    Component
@@ -78,6 +55,8 @@ function CPU_Scheduling() {
     { id: "P4", burstTime: 4, arrivalTime: 3, priority: 3 },
   ]);
   const [showResults, setShowResults] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [quantum, setQuantum] = useState(2);
   const [nextId, setNextId] = useState(5);
 
@@ -89,6 +68,7 @@ function CPU_Scheduling() {
   const currentAlgoDef = ALGORITHMS.find((a) => a.name === selectedAlgo)!;
   const isPriority = selectedAlgo === "Priority Scheduling";
   const isRR = selectedAlgo === "Round Robin";
+  const processColorMap = new Map(processes.map((p, i) => [p.id, i]));
 
   /* ── Handlers ── */
   function addProcess() {
@@ -136,10 +116,34 @@ function CPU_Scheduling() {
     setShowResults(false);
   }
 
-  function runSimulation() {
+  async function runSimulation() {
     if (processes.length === 0) return;
-    // TODO: call FastAPI backend here
-    setShowResults(true);
+    setLoading(true);
+    setShowResults(false);
+    try {
+      const response = await fetch("http://localhost:8000/api/cpu-scheduling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          processes: processes,
+          algorithm: selectedAlgo,
+          preemptive: isPreemptive,
+          quantum: quantum,
+        }),
+      });
+      if (!response.ok) {
+        alert("Backend error: " + response.statusText);
+        return;
+      }
+      const data = await response.json();
+      setSimulationResult(data);
+      setShowResults(true);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to connect to backend. Make sure the FastAPI server is running on port 8000.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   /* ═══════ Render ═══════ */
@@ -190,9 +194,9 @@ function CPU_Scheduling() {
                   type="button"
                   className="cpu-ctrl-btn run-btn"
                   onClick={runSimulation}
-                  disabled={processes.length === 0}
+                  disabled={processes.length === 0 || loading}
                 >
-                  ▶ Run
+                  {loading ? "⌛ Running..." : "▶ Run"}
                 </button>
               </div>
             </div>
@@ -348,11 +352,11 @@ function CPU_Scheduling() {
                 <div className="cpu-metrics">
                   <div className="cpu-metric">
                     <div className="cpu-metric-label">Avg Waiting</div>
-                    <div className="cpu-metric-value">{DEMO_RESULT.avgWaiting.toFixed(2)}</div>
+                    <div className="cpu-metric-value">{simulationResult.avgWaiting.toFixed(2)}</div>
                   </div>
                   <div className="cpu-metric">
                     <div className="cpu-metric-label">Avg Turnaround</div>
-                    <div className="cpu-metric-value">{DEMO_RESULT.avgTurnaround.toFixed(2)}</div>
+                    <div className="cpu-metric-value">{simulationResult.avgTurnaround.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
@@ -360,9 +364,9 @@ function CPU_Scheduling() {
               {/* Gantt Chart */}
               <div className="cpu-gantt-wrapper">
                 <div className="cpu-gantt">
-                  {DEMO_RESULT.gantt.map(function (block, i) {
+                  {simulationResult.gantt.map(function (block: GanttBlock, i: number) {
                     const isIdle = block.pid === "idle";
-                    const ci = isIdle ? 0 : (GANTT_COLOR_MAP.get(block.pid) ?? 0);
+                    const ci = isIdle ? 0 : (processColorMap.get(block.pid) ?? 0);
                     const widthUnits = block.end - block.start;
                     return (
                       <div
@@ -394,7 +398,7 @@ function CPU_Scheduling() {
                     </tr>
                   </thead>
                   <tbody>
-                    {DEMO_RESULT.details.map(function (d) {
+                    {simulationResult.details.map(function (d: ProcessResult) {
                       return (
                         <tr key={d.id}>
                           <td>{d.id}</td>

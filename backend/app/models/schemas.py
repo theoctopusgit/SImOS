@@ -1,0 +1,34 @@
+from pydantic import BaseModel
+from typing import List
+
+class ProcessInput(BaseModel):
+    id: str
+    burstTime: int
+    arrivalTime: int
+    priority: int = 0
+
+class CPUScheduleRequest(BaseModel):
+    processes: List[ProcessInput]
+    algorithm: str
+    preemptive: bool = False
+    quantum: int = 2
+
+class GanttBlock(BaseModel):
+    pid: str
+    start: int
+    end: int
+
+class ProcessResult(BaseModel):
+    id: str
+    arrivalTime: int
+    burstTime: int
+    startTime: int
+    completionTime: int
+    waitingTime: int
+    turnaroundTime: int
+
+class CPUScheduleResponse(BaseModel):
+    gantt: List[GanttBlock]
+    details: List[ProcessResult]
+    avgWaiting: float
+    avgTurnaround: float
