@@ -26,9 +26,20 @@ class ProcessResult(BaseModel):
     completionTime: int
     waitingTime: int
     turnaroundTime: int
-
 class CPUScheduleResponse(BaseModel):
     gantt: List[GanttBlock]
     details: List[ProcessResult]
     avgWaiting: float
     avgTurnaround: float
+
+class CPUCompareRequest(BaseModel):
+    processes: List[ProcessInput]
+    quantum: int = 2
+
+class CPUCompareResult(BaseModel):
+    algorithm: str
+    avgWaiting: float
+    avgTurnaround: float
+
+class CPUCompareResponse(BaseModel):
+    results: List[CPUCompareResult]
