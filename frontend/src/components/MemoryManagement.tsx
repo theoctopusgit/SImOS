@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./MemoryManagement.css";
 
 interface MemBlock {
@@ -38,6 +38,9 @@ const CPU_ALGORITHMS = [
     { name: "Round Robin", abbr: "RR", hasPreemptive: false },
     { name: "Priority Scheduling", abbr: "PRIORITY", hasPreemptive: true },
 ] as const;
+
+const MEM_SPEED_INTERVALS = [1400, 1000, 650, 350, 150];
+const MEM_SPEED_LABELS = ["Slowest", "Slow", "Normal", "Fast", "Fastest"];
 
 type AlgorithmName = (typeof MEMORY_ALGORITHMS)[number]["name"];
 
@@ -164,6 +167,7 @@ function Memory_Management() {
     const [nextProcId, setNextProcId] = useState(5);
 
     const [formBlockSize, setFormBlockSize] = useState("");
+    const [formProcName, setFormProcName] = useState("");
     const [formProcSize, setFormProcSize] = useState("");
     const [formProcArrival, setFormProcArrival] = useState("");
     const [formProcBurst, setFormProcBurst] = useState("");
@@ -171,6 +175,8 @@ function Memory_Management() {
 
     const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
     const [activeTab, setActiveTab] = useState<"blocks" | "processes">("blocks");
+    const [autoPlay, setAutoPlay] = useState(false);
+    const [speed, setSpeed] = useState(3);
 
     const processColorMap = new Map(processes.map(function (p, i) { return [p.id, i]; }));
     const currentCpuAlgoDef = CPU_ALGORITHMS.find((a) => a.name === selectedCpuAlgo)!;
@@ -190,7 +196,7 @@ function Memory_Management() {
     }
 
     function addProcess() {
-        const pid = "P" + nextProcId;
+        const pid = formProcName.trim() || ("P" + nextProcId);
         const size = Number(formProcSize) > 0 ? Number(formProcSize) : 50;
         const arrival = Number(formProcArrival) >= 0 ? Number(formProcArrival) : 0;
         const burst = Number(formProcBurst) > 0 ? Number(formProcBurst) : 1;
@@ -200,6 +206,7 @@ function Memory_Management() {
         }
         setProcesses(function (prev) { return [...prev, { id: pid, size: size, arrivalTime: arrival, burstTime: burst, priority: priority }]; });
         setNextProcId(function (prev) { return prev + 1; });
+        setFormProcName("");
         setFormProcSize("");
         setFormProcArrival("");
         setFormProcBurst("");
@@ -232,8 +239,24 @@ function Memory_Management() {
     function runSimulation() {
         if (blocks.length === 0 || processes.length === 0) return;
         setCurrentTimeIndex(0);
+        setAutoPlay(false);
         setShowResults(true);
     }
+
+    /* Auto-play stepping */
+    useEffect(function () {
+        if (!autoPlay || !showResults) return;
+        const timeline = DEMO_TIMELINE;
+        if (currentTimeIndex >= timeline.length - 1) {
+            setAutoPlay(false);
+            return;
+        }
+        var interval = MEM_SPEED_INTERVALS[speed - 1] || MEM_SPEED_INTERVALS[2];
+        var timer = setTimeout(function () {
+            setCurrentTimeIndex(function (prev) { return Math.min(timeline.length - 1, prev + 1); });
+        }, interval);
+        return function () { clearTimeout(timer); };
+    }, [autoPlay, currentTimeIndex, speed, showResults]);
 
     const activeTimeline = DEMO_TIMELINE;
     const activeTimelineState = activeTimeline[currentTimeIndex] || activeTimeline[0];
@@ -390,8 +413,8 @@ function Memory_Management() {
 
                     <div className="mem-task-form" style={{ flexWrap: "wrap" }}>
                     <div className="mem-input-group" style={{ minWidth: "120px" }}>
-                        <label>Process ID</label>
-                        <input value={"P" + nextProcId} readOnly disabled style={{ cursor: "not-allowed", backgroundColor: "var(--bg-inset)" }} />
+                        <label>Process Name</label>
+                        <input type="text" placeholder={"P" + nextProcId} value={formProcName} onChange={function (e) { setFormProcName(e.target.value); }} onKeyDown={function (e) { if (e.key === "Enter" && Number(formProcSize) > 0) { e.preventDefault(); addProcess(); } }} />
                     </div>
                     <div className="mem-input-group" style={{ minWidth: "100px" }}>
                         <label>Size (KB)</label>
@@ -491,25 +514,42 @@ function Memory_Management() {
                         <h3 style={{ margin: 0, fontFamily: "Outfit, sans-serif", fontSize: "14px", fontWeight: 700, color: "var(--text-secondary)" }}>
                             Memory Stack (Time: {activeTimelineState.time}s)
                         </h3>
-                        <div style={{ display: "flex", gap: "6px" }}>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                             <button
                             type="button"
                             className="mem-ctrl-btn"
                             style={{ padding: "6px 12px", fontSize: "12px" }}
                             disabled={currentTimeIndex === 0}
-                            onClick={function () { setCurrentTimeIndex(function (prev) { return Math.max(0, prev - 1); }); }}
+                            onClick={function () { setAutoPlay(false); setCurrentTimeIndex(function (prev) { return Math.max(0, prev - 1); }); }}
                             >
-                            ◀ Back
+                            Back
                             </button>
                             <button
                             type="button"
                             className="mem-ctrl-btn"
                             style={{ padding: "6px 12px", fontSize: "12px" }}
                             disabled={currentTimeIndex === activeTimeline.length - 1}
-                            onClick={function () { setCurrentTimeIndex(function (prev) { return Math.min(activeTimeline.length - 1, prev + 1); }); }}
+                            onClick={function () { setAutoPlay(false); setCurrentTimeIndex(function (prev) { return Math.min(activeTimeline.length - 1, prev + 1); }); }}
                             >
-                            Next ▶
+                            Next
                             </button>
+                            <button
+                            type="button"
+                            className={"mem-ctrl-btn" + (autoPlay ? " mem-ctrl-btn-active" : "")}
+                            style={{ padding: "6px 12px", fontSize: "12px" }}
+                            disabled={currentTimeIndex >= activeTimeline.length - 1}
+                            onClick={function () { setAutoPlay(function (v) { return !v; }); }}
+                            >
+                            {autoPlay ? "Pause" : "Auto-Play"}
+                            </button>
+                            <select
+                            className="mem-speed-select"
+                            value={speed}
+                            onChange={function (e) { setSpeed(parseInt(e.target.value)); }}
+                            title="Auto-Play Speed"
+                            >
+                            {MEM_SPEED_LABELS.map(function (label, i) { return <option key={i} value={i + 1}>{label}</option>; })}
+                            </select>
                         </div>
                         </div>
 

@@ -27,7 +27,6 @@ function Navbar() {
             <h1 className="nav-logo">SIm<span>OS</span></h1>
             <p className="nav-subtitle">Operating System Simulator</p>
           </div>
-          <span className="nav-version">v1.0</span>
         </div>
         <nav className="nav-links">
           <button type="button" onClick={() => window.open("https://github.com/RodneyGG/SImOS", "_blank")}>GitHub</button>

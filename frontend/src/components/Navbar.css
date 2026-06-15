@@ -53,17 +53,6 @@
   margin: 0;
 }
 
-.nav-version {
-  font-size: 11px;
-  color: #3b7a6a;
-  background: rgba(59, 122, 106, 0.06);
-  border: 1px solid #e4e9ec;
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-weight: 600;
-  line-height: 1;
-}
-
 /* ── Top-right nav links ── */
 .nav-links {
   display: flex;

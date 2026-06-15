@@ -320,65 +320,33 @@
   margin: 0;
 }
 
-/* ── Simulation speed slider ── */
-.vmSliderRow {
+/* ── Auto-play row with speed dropdown ── */
+.vmAutoPlayRow {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 6px;
+  align-items: stretch;
+  margin-top: 4px;
 }
 
-.vmSliderEdgeLabel {
-  font-size: 10px;
+.vmSpeedSelect {
+  height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--accent-lighter);
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.vmSlider {
-  flex: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--bg-inset);
+  font-family: inherit;
   outline: none;
   cursor: pointer;
-  accent-color: var(--accent);
-}
-.vmSlider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 1px var(--accent-lighter), var(--shadow-sm);
-  cursor: pointer;
   transition: var(--transition-fast);
+  appearance: auto;
+  min-width: 90px;
 }
-.vmSlider::-webkit-slider-thumb:hover {
-  background: var(--accent-light);
-}
-.vmSlider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 1px var(--accent-lighter), var(--shadow-sm);
-  cursor: pointer;
-  transition: var(--transition-fast);
-}
-.vmSlider::-moz-range-thumb:hover {
-  background: var(--accent-light);
-}
-.vmSlider::-moz-range-progress {
-  background: var(--accent);
-  height: 6px;
-  border-radius: 999px;
+.vmSpeedSelect:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .vmFramesPreview {

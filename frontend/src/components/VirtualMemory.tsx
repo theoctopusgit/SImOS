@@ -395,6 +395,25 @@ function VirtualMemory() {
     setAutoPlay(false);
   };
 
+  const handleSample = () => {
+    const p = WORKLOAD_PRESETS["Simple Walkthrough"];
+    const mem = p.memorySize!;
+    const pg = p.pageSize!;
+    const algo = p.algorithm! as Algorithm;
+    const seq = p.accessSequence!;
+    setMemorySize(mem);
+    setPageSize(pg);
+    setAlgorithm(algo);
+    setAccessSequence(seq);
+    setPreset("Simple Walkthrough");
+    setError("");
+    setAutoPlay(false);
+    const pages = seq.split(",").map((s) => Number(s.trim())).filter((n) => !isNaN(n));
+    const sim = runSimulation(pages, parseInt(mem), parseInt(pg), algo);
+    setResult(sim);
+    setStepIndex(null);
+  };
+
   const handleStep = () => {
     if (!result) return;
     setStepIndex((prev) => {
@@ -458,9 +477,10 @@ function VirtualMemory() {
                 <h2 className={styles.vmPanelTitle}>Configure Simulation</h2>
               </div>
               <div className={styles.vmHeaderActions}>
-                <button type="button" className={styles.vmRunBtn} onClick={handleRun}>▶ Run</button>
+                <button type="button" className={styles.vmStepBtn} onClick={handleSample}>Sample</button>
+                <button type="button" className={styles.vmRunBtn} onClick={handleRun}>Run</button>
                 <button type="button" className={styles.vmStepBtn} onClick={handleStep} disabled={!result}>Step</button>
-                <button type="button" className={styles.vmResetBtn} onClick={handleReset}>↺ Reset</button>
+                <button type="button" className={styles.vmResetBtn} onClick={handleReset}>Reset</button>
               </div>
             </div>
 
@@ -545,24 +565,7 @@ function VirtualMemory() {
                 <p className={styles.vmHint}>Comma-separated page numbers</p>
               </div>
 
-              {/* Simulation Speed */}
-              <div className={styles.vmFieldGroupFull}>
-                <label className={styles.vmLabel}>Simulation Speed</label>
-                <div className={styles.vmSliderRow}>
-                  <span className={styles.vmSliderEdgeLabel}>Slow</span>
-                  <input
-                    className={styles.vmSlider}
-                    type="range"
-                    min={1}
-                    max={5}
-                    step={1}
-                    value={speed}
-                    onChange={(e) => setSpeed(parseInt(e.target.value))}
-                  />
-                  <span className={styles.vmSliderEdgeLabel}>Fast</span>
-                </div>
-                <p className={styles.vmHint}>{SPEED_LABELS[speed - 1]} — controls Step / Auto-Play pacing</p>
-              </div>
+
             </div>
 
             {error && <div className={styles.vmError}>{error}</div>}
@@ -686,14 +689,27 @@ function VirtualMemory() {
                         onClick={() => { setAutoPlay(false); handleStep(); }}
                       >Next ▶</button>
                     </div>
-                    <button
-                      type="button"
-                      className={styles.vmCtrlBtnSecondary + (autoPlay ? " " + styles.vmCtrlBtnActive : "")}
-                      disabled={stepIndex !== null && stepIndex >= result.accessLog.length - 1}
-                      onClick={() => setAutoPlay((v) => !v)}
-                    >
-                      {autoPlay ? "⏸ Pause Auto-Play" : "▶ Auto-Play"}
-                    </button>
+                    <div className={styles.vmAutoPlayRow}>
+                      <button
+                        type="button"
+                        className={styles.vmCtrlBtnSecondary + (autoPlay ? " " + styles.vmCtrlBtnActive : "")}
+                        disabled={stepIndex !== null && stepIndex >= result.accessLog.length - 1}
+                        onClick={() => setAutoPlay((v) => !v)}
+                        style={{ flex: 1 }}
+                      >
+                        {autoPlay ? "Pause Auto-Play" : "Auto-Play"}
+                      </button>
+                      <select
+                        className={styles.vmSpeedSelect}
+                        value={speed}
+                        onChange={(e) => setSpeed(parseInt(e.target.value))}
+                        title="Auto-Play Speed"
+                      >
+                        {SPEED_LABELS.map((label, i) => (
+                          <option key={i} value={i + 1}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
                     {stepIndex !== null && (
                       <button
                         type="button"
