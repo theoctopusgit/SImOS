@@ -8,9 +8,10 @@ interface SeekMovement {
   distance: number;
 }
 
-type DiskAlgorithm = "FCFS" | "SSTF" | "SCAN" | "C-SCAN";
+type DiskAlgorithm = "CHOOSE" | "FCFS" | "SSTF" | "SCAN" | "C-SCAN";
 
 const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
+  { label: "Choose Algorithm", value: "CHOOSE", abbr: "None" },
   { label: "First Come, First Served", value: "FCFS", abbr: "FCFS" },
   { label: "Shortest Seek Time First", value: "SSTF", abbr: "SSTF" },
   { label: "SCAN / Elevator", value: "SCAN", abbr: "SCAN" },
@@ -18,7 +19,6 @@ const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
 ];
 
 const DISK_MIN = 0;
-const DISK_MAX = 199;
 
 function parseQueue(input: string): number[] {
   return input
@@ -27,7 +27,7 @@ function parseQueue(input: string): number[] {
       return parseInt(value.trim(), 10);
     })
     .filter(function (value) {
-      return !isNaN(value) && value >= DISK_MIN && value <= DISK_MAX;
+      return !isNaN(value) && value >= DISK_MIN;
     });
 }
 
@@ -77,27 +77,27 @@ function runSSTF(head: number, queue: number[]): number[] {
   return sequence;
 }
 
-function runSCAN(head: number, queue: number[]): number[] {
+function runSCAN(head: number, queue: number[], maxVal: number): number[] {
   const left = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return b - a; });
   const right = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
 
   const sequence = [head, ...right];
 
-  if (sequence[sequence.length - 1] !== DISK_MAX) {
-    sequence.push(DISK_MAX);
+  if (sequence[sequence.length - 1] !== maxVal) {
+    sequence.push(maxVal);
   }
 
   return [...sequence, ...left];
 }
 
-function runCSCAN(head: number, queue: number[]): number[] {
+function runCSCAN(head: number, queue: number[], maxVal: number): number[] {
   const left = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return a - b; });
   const right = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
 
   const sequence = [head, ...right];
 
-  if (sequence[sequence.length - 1] !== DISK_MAX) {
-    sequence.push(DISK_MAX);
+  if (sequence[sequence.length - 1] !== maxVal) {
+    sequence.push(maxVal);
   }
 
   sequence.push(DISK_MIN);
@@ -105,16 +105,16 @@ function runCSCAN(head: number, queue: number[]): number[] {
   return [...sequence, ...left];
 }
 
-function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[]): number[] {
+function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[], maxVal: number): number[] {
   if (queue.length === 0) return [head];
 
   switch (algorithm) {
     case "SSTF":
       return runSSTF(head, queue);
     case "SCAN":
-      return runSCAN(head, queue);
+      return runSCAN(head, queue, maxVal);
     case "C-SCAN":
-      return runCSCAN(head, queue);
+      return runCSCAN(head, queue, maxVal);
     case "FCFS":
     default:
       return runFCFS(head, queue);
@@ -122,9 +122,10 @@ function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[]
 }
 
 export const DiskScheduling: React.FC = () => {
-  const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("FCFS");
-  const [queueInput, setQueueInput] = useState<string>("98, 183, 37, 122, 14, 124, 65, 67");
+  const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE");
+  const [queueInput, setQueueInput] = useState<string>("");
   const [initialHead, setInitialHead] = useState<number>(53);
+  const [maxTrack, setMaxTrack] = useState<number>(199);
   const [sequence, setSequence] = useState<number[]>([]);
   const [movements, setMovements] = useState<SeekMovement[]>([]);
   const [totalMovement, setTotalMovement] = useState<number>(0);
@@ -136,13 +137,23 @@ export const DiskScheduling: React.FC = () => {
     return ALGORITHMS.find(function (item) { return item.value === algorithm; })!;
   }, [algorithm]);
 
-  function handleExecuteRun(e?: React.FormEvent) {
+  function handleExecuteRun(e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
 
-    const safeHead = Math.max(DISK_MIN, Math.min(DISK_MAX, initialHead || 0));
-    const parsedQueue = parseQueue(queueInput);
+    if (algorithm === "CHOOSE") {
+      if (!isMount) {
+        alert("Please select a disk scheduling algorithm.");
+      }
+      return;
+    }
 
-    const computedSequence = computeSequence(algorithm, safeHead, parsedQueue);
+    const parsedQueue = parseQueue(queueInput);
+    const safeHead = Math.max(DISK_MIN, initialHead || 0);
+
+    const computedMaxTrack = Math.max(199, safeHead, ...parsedQueue);
+    setMaxTrack(computedMaxTrack);
+
+    const computedSequence = computeSequence(algorithm, safeHead, parsedQueue, computedMaxTrack);
     const computedMovements = buildMovements(computedSequence);
     const computedTotal = computedMovements.reduce(function (sum, move) {
       return sum + move.distance;
@@ -156,7 +167,7 @@ export const DiskScheduling: React.FC = () => {
   }
 
   useEffect(function () {
-    handleExecuteRun();
+    handleExecuteRun(undefined, true);
   }, []);
 
   useEffect(function () {
@@ -190,13 +201,21 @@ export const DiskScheduling: React.FC = () => {
     ctx.strokeStyle = "#e4e9ec";
     ctx.lineWidth = 1;
 
-    for (let t = 0; t <= 200; t += 50) {
-      const x = paddingLeft + (t / 199) * graphWidth;
+    const ticks = [
+      0,
+      Math.round(maxTrack * 0.25),
+      Math.round(maxTrack * 0.5),
+      Math.round(maxTrack * 0.75),
+      maxTrack
+    ];
+
+    ticks.forEach(function (tick) {
+      const x = paddingLeft + (tick / maxTrack) * graphWidth;
       ctx.beginPath();
       ctx.moveTo(x, paddingTop);
       ctx.lineTo(x, paddingTop + graphHeight);
       ctx.stroke();
-    }
+    });
 
     const axisY = paddingTop + graphHeight;
     ctx.strokeStyle = "#cfd7dc";
@@ -210,8 +229,8 @@ export const DiskScheduling: React.FC = () => {
     ctx.font = "600 11px Inter, sans-serif";
     ctx.textAlign = "center";
 
-    [0, 50, 100, 150, 199].forEach(function (tick) {
-      const x = paddingLeft + (tick / 199) * graphWidth;
+    ticks.forEach(function (tick) {
+      const x = paddingLeft + (tick / maxTrack) * graphWidth;
       ctx.fillText(String(tick), x, axisY + 20);
     });
 
@@ -224,7 +243,7 @@ export const DiskScheduling: React.FC = () => {
     ctx.beginPath();
 
     sequence.forEach(function (track, index) {
-      const x = paddingLeft + (track / 199) * graphWidth;
+      const x = paddingLeft + (track / maxTrack) * graphWidth;
       const y = paddingTop + index * stepGap;
 
       if (index === 0) ctx.moveTo(x, y);
@@ -234,7 +253,7 @@ export const DiskScheduling: React.FC = () => {
     ctx.stroke();
 
     sequence.forEach(function (track, index) {
-      const x = paddingLeft + (track / 199) * graphWidth;
+      const x = paddingLeft + (track / maxTrack) * graphWidth;
       const y = paddingTop + index * stepGap;
 
       ctx.fillStyle = index === 0 ? "#7c5cbf" : "#3B7A6A";
@@ -251,7 +270,7 @@ export const DiskScheduling: React.FC = () => {
       ctx.font = "700 10px Inter, sans-serif";
       ctx.fillText(index === 0 ? "START" : "S" + index, x + 8, y - 8);
     });
-  }, [sequence]);
+  }, [sequence, maxTrack]);
 
   const requestCount = Math.max(sequence.length - 1, 0);
   const sequenceLabel = sequence.join(" -> ");
@@ -266,7 +285,7 @@ export const DiskScheduling: React.FC = () => {
       <div className="disk-content">
         <aside className="disk-sidebar">
           <h3>Select Algorithm</h3>
-          {ALGORITHMS.map(function (item) {
+          {ALGORITHMS.filter(function (item) { return item.value !== "CHOOSE"; }).map(function (item) {
             return (
               <button
                 key={item.value}
@@ -310,6 +329,7 @@ export const DiskScheduling: React.FC = () => {
                   onClick={function () {
                     setQueueInput("");
                     setInitialHead(0);
+                    setAlgorithm("CHOOSE");
                     setSequence([]);
                     setMovements([]);
                     setTotalMovement(0);
@@ -355,7 +375,6 @@ export const DiskScheduling: React.FC = () => {
                 <input
                   type="number"
                   min={DISK_MIN}
-                  max={DISK_MAX}
                   value={initialHead}
                   onChange={function (e) {
                     setInitialHead(parseInt(e.target.value, 10) || 0);
@@ -413,7 +432,7 @@ export const DiskScheduling: React.FC = () => {
 
             <div className="disk-chart-shell">
               <div className="disk-chart-meta">
-                <span className="disk-chart-badge">Track Range: {DISK_MIN}-{DISK_MAX}</span>
+                <span className="disk-chart-badge">Track Range: {DISK_MIN}-{maxTrack}</span>
                 <span className="disk-chart-sequence">Sequence: {sequenceLabel || "—"}</span>
               </div>
 
