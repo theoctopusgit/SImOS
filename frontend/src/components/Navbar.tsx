@@ -22,7 +22,12 @@ function Navbar() {
     <>
       <header className="nav-header">
         <div className="nav-logo-section">
-          <button type="button" className="nav-menu-btn" onClick={function () { setDrawerOpen(!drawerOpen); }}>☰</button>
+          <button type="button" className="nav-menu-btn" onClick={function () { setDrawerOpen(!drawerOpen); }} aria-label="Toggle navigation">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="18" height="18" rx="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+          </svg>
+        </button>
           <div>
             <h1 className="nav-logo">SIm<span>OS</span></h1>
             <p className="nav-subtitle">Operating System Simulator</p>

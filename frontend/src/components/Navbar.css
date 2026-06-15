@@ -27,6 +27,11 @@
   transition: background 0.18s;
 }
 
+.nav-menu-btn svg {
+  display: block;
+  transform: translateY(2px);
+}
+
 .nav-menu-btn:hover {
   background: #eef1f4;
 }
