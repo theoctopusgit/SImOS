@@ -33,36 +33,22 @@ const ALGORITHMS = [
   { name: "Priority Scheduling", abbr: "PRIORITY", hasPreemptive: true },
 ] as const;
 
+const COMPARE_OPTIONS = [
+  "First Come First Serve",
+  "Shortest Job First (Non-preemptive)",
+  "Shortest Job First (Preemptive)",
+  "Round Robin",
+  "Priority Scheduling (Non-preemptive)",
+  "Priority Scheduling (Preemptive)"
+] as const;
+
 type AlgorithmName = (typeof ALGORITHMS)[number]["name"];
 
 /* ── Colors ── */
 const COLORS = 8;
 const colorIndex = (i: number) => i % COLORS;
 
-/* ── Single predefined demo result (visual only) ── */
-const DEMO_GANTT: GanttBlock[] = [
-  { pid: "P1", start: 0, end: 6 },
-  { pid: "P2", start: 6, end: 14 },
-  { pid: "P3", start: 14, end: 17 },
-  { pid: "P4", start: 17, end: 21 },
-];
 
-const DEMO_DETAILS: ProcessResult[] = [
-  { id: "P1", arrivalTime: 0, burstTime: 6, startTime: 0, completionTime: 6, waitingTime: 0, turnaroundTime: 6 },
-  { id: "P2", arrivalTime: 1, burstTime: 8, startTime: 6, completionTime: 14, waitingTime: 5, turnaroundTime: 13 },
-  { id: "P3", arrivalTime: 2, burstTime: 3, startTime: 14, completionTime: 17, waitingTime: 12, turnaroundTime: 15 },
-  { id: "P4", arrivalTime: 3, burstTime: 4, startTime: 17, completionTime: 21, waitingTime: 14, turnaroundTime: 18 },
-];
-
-const DEMO_RESULT = {
-  gantt: DEMO_GANTT,
-  details: DEMO_DETAILS,
-  avgWaiting: 7.75,
-  avgTurnaround: 13.0,
-};
-
-/* ── Gantt color map (fixed to P1-P4) ── */
-const GANTT_COLOR_MAP = new Map([["P1", 0], ["P2", 1], ["P3", 2], ["P4", 3]]);
 
 /* ═══════════════════════════════════════════════════
    Component
@@ -78,6 +64,11 @@ function CPU_Scheduling() {
     { id: "P4", burstTime: 4, arrivalTime: 3, priority: 3 },
   ]);
   const [showResults, setShowResults] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"simulate" | "compare">("simulate");
+  const [compareResults, setCompareResults] = useState<any[]>([]);
+  const [compareSelection, setCompareSelection] = useState<string[]>([...COMPARE_OPTIONS]);
+  const [loading, setLoading] = useState(false);
   const [quantum, setQuantum] = useState(2);
   const [nextId, setNextId] = useState(5);
 
@@ -89,6 +80,7 @@ function CPU_Scheduling() {
   const currentAlgoDef = ALGORITHMS.find((a) => a.name === selectedAlgo)!;
   const isPriority = selectedAlgo === "Priority Scheduling";
   const isRR = selectedAlgo === "Round Robin";
+  const processColorMap = new Map(processes.map((p, i) => [p.id, i]));
 
   /* ── Handlers ── */
   function addProcess() {
@@ -136,10 +128,61 @@ function CPU_Scheduling() {
     setShowResults(false);
   }
 
-  function runSimulation() {
+  async function runSimulation() {
     if (processes.length === 0) return;
-    // TODO: call FastAPI backend here
-    setShowResults(true);
+    setLoading(true);
+    setShowResults(false);
+    try {
+      const response = await fetch("http://localhost:8000/api/cpu-scheduling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          processes: processes,
+          algorithm: selectedAlgo,
+          preemptive: isPreemptive,
+          quantum: quantum,
+        }),
+      });
+      if (!response.ok) {
+        alert("Backend error: " + response.statusText);
+        return;
+      }
+      const data = await response.json();
+      setSimulationResult(data);
+      setShowResults(true);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to connect to backend. Make sure the FastAPI server is running on port 8000.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function runComparison() {
+    if (processes.length === 0) return;
+    setLoading(true);
+    setCompareResults([]);
+    try {
+      const response = await fetch("http://localhost:8000/api/cpu-scheduling/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          processes: processes,
+          quantum: quantum,
+        }),
+      });
+      if (!response.ok) {
+        alert("Backend error: " + response.statusText);
+        return;
+      }
+      const data = await response.json();
+      setCompareResults(data.results);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to connect to backend.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   /* ═══════ Render ═══════ */
@@ -147,32 +190,71 @@ function CPU_Scheduling() {
     <div className="cpu-app">
       {/* Tabs */}
       <div className="cpu-tabs">
-        <button type="button" className="cpu-tab active">Algorithm Simulation</button>
-        <button type="button" className="cpu-tab">Compare Algorithms</button>
+        <button type="button" className={"cpu-tab" + (activeTab === "simulate" ? " active" : "")} onClick={function () { setActiveTab("simulate"); }}>Algorithm Simulation</button>
+        <button type="button" className={"cpu-tab" + (activeTab === "compare" ? " active" : "")} onClick={function () { setActiveTab("compare"); }}>Compare Algorithms</button>
       </div>
 
       {/* Main Content */}
       <div className="cpu-content">
         {/* Sidebar */}
+        {/* Sidebar */}
         <aside className="cpu-sidebar">
-          <h3>Select Algorithm</h3>
-          {ALGORITHMS.map(function (algo) {
-            return (
-              <button
-                type="button"
-                key={algo.name}
-                className={"cpu-algo-card" + (selectedAlgo === algo.name ? " selected" : "")}
-                onClick={function () {
-                  setSelectedAlgo(algo.name);
-                  setIsPreemptive(false);
-                  setShowResults(false);
-                }}
-              >
-                {algo.name}
-                <span className="algo-abbr">{algo.abbr}</span>
-              </button>
-            );
-          })}
+          {activeTab === "simulate" ? (
+            <>
+              <h3>Select Algorithm</h3>
+              {ALGORITHMS.map(function (algo) {
+                return (
+                  <button
+                    type="button"
+                    key={algo.name}
+                    className={"cpu-algo-card" + (selectedAlgo === algo.name ? " selected" : "")}
+                    onClick={function () {
+                      setSelectedAlgo(algo.name);
+                      setIsPreemptive(false);
+                      setShowResults(false);
+                    }}
+                  >
+                    {algo.name}
+                    <span className="algo-abbr">{algo.abbr}</span>
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <>
+              <h3>Algorithms to Compare</h3>
+              <div style={{ display: "flex", flexDirection: "column", marginTop: "16px" }}>
+                {[
+                  { name: "First Come First Serve", abbr: "FCFS" },
+                  { name: "Shortest Job First (Non-preemptive)", abbr: "SJF-NP" },
+                  { name: "Shortest Job First (Preemptive)", abbr: "SJF-P" },
+                  { name: "Round Robin", abbr: "RR" },
+                  { name: "Priority Scheduling (Non-preemptive)", abbr: "PS-NP" },
+                  { name: "Priority Scheduling (Preemptive)", abbr: "PS-P" }
+                ].map((algo) => {
+                  const isSelected = compareSelection.includes(algo.name);
+                  return (
+                    <button
+                      type="button"
+                      key={algo.name}
+                      className={"cpu-algo-card" + (isSelected ? " selected" : "")}
+                      onClick={() => {
+                        if (isSelected) {
+                          setCompareSelection(prev => prev.filter(name => name !== algo.name));
+                        } else {
+                          setCompareSelection(prev => [...prev, algo.name]);
+                        }
+                      }}
+                      style={{ marginBottom: "8px", padding: "12px", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                    >
+                      <span style={{ fontSize: "14px", lineHeight: "1.2" }}>{algo.name}</span>
+                      <span className="algo-abbr" style={{ fontSize: "10px", padding: "2px 6px" }}>{algo.abbr}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* Task Manager */}
@@ -189,16 +271,16 @@ function CPU_Scheduling() {
                 <button
                   type="button"
                   className="cpu-ctrl-btn run-btn"
-                  onClick={runSimulation}
-                  disabled={processes.length === 0}
+                  onClick={activeTab === "simulate" ? runSimulation : runComparison}
+                  disabled={processes.length === 0 || loading}
                 >
-                  ▶ Run
+                  {loading ? "⌛ Running..." : (activeTab === "simulate" ? "▶ Run" : "▶ Compare")}
                 </button>
               </div>
             </div>
 
             {/* Preemptive toggle */}
-            {currentAlgoDef.hasPreemptive && (
+            {activeTab === "simulate" && currentAlgoDef.hasPreemptive && (
               <div className="cpu-preemptive-toggle">
                 <button
                   type="button"
@@ -219,9 +301,9 @@ function CPU_Scheduling() {
             )}
 
             {/* Quantum */}
-            {isRR && (
+            {(isRR || activeTab === "compare") && (
               <div className="cpu-quantum-section">
-                <label>Time Quantum:</label>
+                <label>Time Quantum (for Round Robin):</label>
                 <input
                   type="number"
                   min={1}
@@ -229,6 +311,7 @@ function CPU_Scheduling() {
                   onChange={function (e) {
                     setQuantum(Math.max(1, parseInt(e.target.value) || 1));
                     setShowResults(false);
+                    setCompareResults([]);
                   }}
                 />
               </div>
@@ -333,8 +416,8 @@ function CPU_Scheduling() {
             </div>
           </section>
 
-          {/* Results (predefined demo) */}
-          {showResults && (
+          {/* Results: Simulation */}
+          {activeTab === "simulate" && showResults && simulationResult && (
             <section className="cpu-results">
               <div className="cpu-results-header">
                 <div>
@@ -348,11 +431,11 @@ function CPU_Scheduling() {
                 <div className="cpu-metrics">
                   <div className="cpu-metric">
                     <div className="cpu-metric-label">Avg Waiting</div>
-                    <div className="cpu-metric-value">{DEMO_RESULT.avgWaiting.toFixed(2)}</div>
+                    <div className="cpu-metric-value">{simulationResult.avgWaiting.toFixed(2)}</div>
                   </div>
                   <div className="cpu-metric">
                     <div className="cpu-metric-label">Avg Turnaround</div>
-                    <div className="cpu-metric-value">{DEMO_RESULT.avgTurnaround.toFixed(2)}</div>
+                    <div className="cpu-metric-value">{simulationResult.avgTurnaround.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
@@ -360,9 +443,9 @@ function CPU_Scheduling() {
               {/* Gantt Chart */}
               <div className="cpu-gantt-wrapper">
                 <div className="cpu-gantt">
-                  {DEMO_RESULT.gantt.map(function (block, i) {
+                  {simulationResult.gantt.map(function (block: GanttBlock, i: number) {
                     const isIdle = block.pid === "idle";
-                    const ci = isIdle ? 0 : (GANTT_COLOR_MAP.get(block.pid) ?? 0);
+                    const ci = isIdle ? 0 : (processColorMap.get(block.pid) ?? 0);
                     const widthUnits = block.end - block.start;
                     return (
                       <div
@@ -394,7 +477,7 @@ function CPU_Scheduling() {
                     </tr>
                   </thead>
                   <tbody>
-                    {DEMO_RESULT.details.map(function (d) {
+                    {simulationResult.details.map(function (d: ProcessResult) {
                       return (
                         <tr key={d.id}>
                           <td>{d.id}</td>
@@ -412,6 +495,42 @@ function CPU_Scheduling() {
               </div>
             </section>
           )}
+
+          {/* Results: Comparison */}
+          {activeTab === "compare" && compareResults.length > 0 && (
+            <section className="cpu-comparison-results">
+              <h2>Algorithm Comparison</h2>
+              <div className="cpu-metrics">
+                <table className="cpu-table" style={{ width: "100%", marginTop: "16px" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left" }}>Algorithm</th>
+                      <th>Avg Waiting Time</th>
+                      <th>Avg Turnaround Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareResults
+                      .filter(res => compareSelection.includes(res.algorithm))
+                      .sort((a, b) => a.avgWaiting - b.avgWaiting)
+                      .map((res, i) => (
+                      <tr key={res.algorithm} style={{ backgroundColor: i === 0 ? "rgba(46, 204, 113, 0.1)" : "transparent" }}>
+                        <td style={{ textAlign: "left", fontWeight: i === 0 ? "bold" : "normal" }}>
+                          {i === 0 ? "🏆 " : ""}{res.algorithm}
+                        </td>
+                        <td style={{ color: i === 0 ? "var(--success)" : "inherit", fontWeight: i === 0 ? "bold" : "normal" }}>{res.avgWaiting.toFixed(2)}</td>
+                        <td>{res.avgTurnaround.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ marginTop: "16px", color: "var(--text-light)" }}>
+                The algorithm with the lowest Average Waiting Time is highlighted in green.
+              </p>
+            </section>
+          )}
+
         </div>
       </div>
     </div>
