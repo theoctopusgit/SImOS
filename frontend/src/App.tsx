@@ -6,6 +6,7 @@ import CPU_Scheduling from "./components/CPU_Scheduling";
 import Memory_Management from "./components/MemoryManagement";
 import "./App.css";
 import VirtualMemory from "./components/VirtualMemory";
+import About from "./components/About";
 
 function AppContent() {
   return (
@@ -17,6 +18,7 @@ function AppContent() {
           <Route path="/memory-management" element={<Memory_Management />} />
           <Route path="/virtual-memory" element={<VirtualMemory />} />
           <Route path="*" element={<Navigate to="/cpu-scheduling" replace />} />
+          <Route path="/about" element={<About />} />
         </Routes>
       </div>
     </div>
