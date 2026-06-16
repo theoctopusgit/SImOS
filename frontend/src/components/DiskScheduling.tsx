@@ -22,6 +22,9 @@ const ALGORITHMS: { label: string; value: DiskAlgorithm; abbr: string }[] = [
 ];
 
 const DISK_MIN = 0;
+const DEFAULT_INITIAL_HEAD = 53;
+const DEFAULT_MAX_TRACK = 200;
+const ALGORITHMS_REQUIRING_DIRECTION: DiskAlgorithm[] = ["SCAN", "C-SCAN", "LOOK", "C-LOOK"];
 
 const DIRECTION_OPTIONS: { label: string; value: DiskDirection }[] = [
   { label: "Towards 0", value: "towards-0" },
@@ -192,10 +195,10 @@ export const DiskScheduling: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE ALGORITHM");
   const [direction, setDirection] = useState<DiskDirection>("towards-roof");
   const [queueInput, setQueueInput] = useState<string>("");
-  const [initialHead, setInitialHead] = useState<number | "">(53);
-  const [displayedInitialHead, setDisplayedInitialHead] = useState<number | "">(53);
+  const [initialHead, setInitialHead] = useState<number | "">(DEFAULT_INITIAL_HEAD);
+  const [displayedInitialHead, setDisplayedInitialHead] = useState<number | "">(DEFAULT_INITIAL_HEAD);
   const [maxTrackInput, setMaxTrackInput] = useState<string>("");
-  const [maxTrack, setMaxTrack] = useState<number>(200);
+  const [maxTrack, setMaxTrack] = useState<number>(DEFAULT_MAX_TRACK);
   const [sequence, setSequence] = useState<number[]>([]);
   const [movements, setMovements] = useState<SeekMovement[]>([]);
   const [totalMovement, setTotalMovement] = useState<number>(0);
@@ -207,7 +210,7 @@ export const DiskScheduling: React.FC = () => {
     return ALGORITHMS.find(function (item) { return item.value === algorithm; })!;
   }, [algorithm]);
 
-  const showsDirectionInput = ["SCAN", "C-SCAN", "LOOK", "C-LOOK"].includes(algorithm);
+  const showsDirectionInput = ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm);
 
   function handleExecuteRun(e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
@@ -220,8 +223,8 @@ export const DiskScheduling: React.FC = () => {
     }
 
     const parsedQueue = parseQueue(queueInput);
-    const safeHead = Math.max(DISK_MIN, initialHead === "" ? 53 : initialHead);
-    const requestedMaxTrack = maxTrackInput === "" ? 200 : Math.max(200, parseInt(maxTrackInput, 10) || 200);
+    const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
+    const requestedMaxTrack = maxTrackInput === "" ? DEFAULT_MAX_TRACK : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
 
     const maxInput = Math.max(safeHead, ...parsedQueue);
     const computedMaxTrack = Math.max(requestedMaxTrack, maxInput > requestedMaxTrack ? Math.ceil(maxInput / 50) * 50 : requestedMaxTrack);
@@ -371,7 +374,7 @@ export const DiskScheduling: React.FC = () => {
                   className="disk-ctrl-btn"
                   onClick={function () {
                     setQueueInput("98, 183, 37, 122, 14, 124, 65, 67");
-                    setInitialHead(53);
+                    setInitialHead(DEFAULT_INITIAL_HEAD);
                     setMaxTrackInput("");
                     setAlgorithm("FCFS");
                     setHasRun(false);
@@ -384,8 +387,8 @@ export const DiskScheduling: React.FC = () => {
                   className="disk-ctrl-btn danger-btn"
                   onClick={function () {
                     setQueueInput("");
-                    setInitialHead(53);
-                    setDisplayedInitialHead(53);
+                    setInitialHead(DEFAULT_INITIAL_HEAD);
+                    setDisplayedInitialHead(DEFAULT_INITIAL_HEAD);
                     setMaxTrackInput("");
                     setAlgorithm("CHOOSE ALGORITHM");
                     setSequence([]);
@@ -416,7 +419,7 @@ export const DiskScheduling: React.FC = () => {
                   onChange={function (e) {
                     const nextAlgorithm = e.target.value as DiskAlgorithm;
                     setAlgorithm(nextAlgorithm);
-                    if (["SCAN", "C-SCAN", "LOOK", "C-LOOK"].includes(nextAlgorithm)) {
+                    if (ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
                       setDirection("towards-roof");
                     }
                     setHasRun(false);
@@ -436,13 +439,13 @@ export const DiskScheduling: React.FC = () => {
                 <label>Max Track/Disk Size</label>
                 <input
                   type="number"
-                  min={200}
+                  min={DEFAULT_MAX_TRACK}
                   value={maxTrackInput}
                   onChange={function (e) {
                     setMaxTrackInput(e.target.value);
                     setHasRun(false);
                   }}
-                  placeholder="Default: 200"
+                  placeholder={`Default: ${DEFAULT_MAX_TRACK}`}
                 />
               </div>
 
@@ -483,7 +486,7 @@ export const DiskScheduling: React.FC = () => {
                     }
                     setHasRun(false);
                   }}
-                  placeholder="e.g. 53"
+                  placeholder={`e.g. ${DEFAULT_INITIAL_HEAD}`}
                 />
               </div>
 
