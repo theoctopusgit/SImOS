@@ -588,8 +588,8 @@ export const DiskScheduling: React.FC = () => {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={2} className="disk-foot-label">Total Head Movement</td>
-                        <td className="disk-foot-total">{totalMovement} tracks</td>
+                        <td colSpan={2} className="disk-foot-label"><strong>Total Head Movement</strong></td>
+                        <td className="disk-foot-total"><strong>{totalMovement} tracks</strong></td>
                       </tr>
                     </tfoot>
                   </table>
