@@ -99,7 +99,7 @@ const SIMULATIONS = [
     title: "Mass Storage",
     description:
       "Simulate disk scheduling algorithms including FCFS, SSTF, SCAN, C-SCAN, and LOOK. Understand seek time optimization in action.",
-    tags: ["FCFS", "SSTF", "SCAN", "C-SCAN", "LOOK"],
+    tags: ["FCFS", "SSTF", "SCAN", "C-SCAN", "LOOK", "C-LOOK"],
     tagColor: "#e8a33c",
     tagBg: "rgba(232,163,60,0.08)",
     status: "ready",
