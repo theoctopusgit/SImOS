@@ -456,7 +456,7 @@ export const DiskScheduling: React.FC = () => {
                     setValidationError("");
                     const nextAlgorithm = e.target.value as DiskAlgorithm;
                     setAlgorithm(nextAlgorithm);
-                    if (ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
+                    if (!ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm) && ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
                       setDirection("towards-roof");
                     }
                     setHasRun(false);
