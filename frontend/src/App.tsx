@@ -24,7 +24,7 @@ function AppContent() {
           <Route path="/virtual-memory" element={<VirtualMemory />} />
           <Route path="/mass-storage" element={<DiskScheduling />} />
           <Route path="/about" element={<About />} />
-          <Route path="*" element={<Navigate to="/cpu-scheduling" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>
