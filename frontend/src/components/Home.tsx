@@ -1,11 +1,60 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Home.module.css";
+
+/* SVG icon components for simulation cards */
+function CpuIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="9" y="9" width="6" height="6" />
+      <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
+      <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
+      <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
+      <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+    </svg>
+  );
+}
+
+function MemoryIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <line x1="7" y1="4" x2="7" y2="10" />
+      <line x1="12" y1="4" x2="12" y2="10" />
+      <line x1="17" y1="4" x2="17" y2="10" />
+    </svg>
+  );
+}
+
+function VirtualMemoryIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="8" height="8" rx="1" />
+      <rect x="14" y="3" width="8" height="8" rx="1" />
+      <rect x="2" y="13" width="8" height="8" rx="1" />
+      <rect x="14" y="13" width="8" height="8" rx="1" />
+      <path d="M10 7h4" /><path d="M10 17h4" />
+      <path d="M6 11v2" /><path d="M18 11v2" />
+    </svg>
+  );
+}
+
+function DiskIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="3" />
+      <line x1="12" y1="9" x2="12" y2="2" />
+    </svg>
+  );
+}
 
 const SIMULATIONS = [
   {
     path: "/cpu-scheduling",
-    icon: "⚙️",
+    IconComponent: CpuIcon,
     iconBg: "#e8f0fe",
     iconColor: "#4a6cf7",
     title: "CPU Scheduling",
@@ -18,7 +67,7 @@ const SIMULATIONS = [
   },
   {
     path: "/memory-management",
-    icon: "🗂️",
+    IconComponent: MemoryIcon,
     iconBg: "#f3e8ff",
     iconColor: "#7c5cbf",
     title: "Memory Management",
@@ -31,7 +80,7 @@ const SIMULATIONS = [
   },
   {
     path: "/virtual-memory",
-    icon: "🧩",
+    IconComponent: VirtualMemoryIcon,
     iconBg: "#e8f5f0",
     iconColor: "#3B7A6A",
     title: "Virtual Memory",
@@ -44,7 +93,7 @@ const SIMULATIONS = [
   },
   {
     path: "/mass-storage",
-    icon: "💾",
+    IconComponent: DiskIcon,
     iconBg: "#fff4e5",
     iconColor: "#e8a33c",
     title: "Mass Storage",
@@ -60,10 +109,32 @@ const SIMULATIONS = [
 function Home() {
   const navigate = useNavigate();
   const simRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationFrameRef = useRef<number | null>(null);
+
+  useEffect(function () {
+    return function () {
+      if (scrollAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(scrollAnimationFrameRef.current);
+      }
+    };
+  }, []);
 
   function scrollToSims() {
     const target = simRef.current;
     if (!target) return;
+
+    // Honor prefers-reduced-motion: jump instantly instead of animating
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      target.scrollIntoView({ block: "start" });
+      return;
+    }
+
+    // Cancel any in-flight animation before starting a new one
+    if (scrollAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(scrollAnimationFrameRef.current);
+      scrollAnimationFrameRef.current = null;
+    }
 
     const start = window.scrollY;
     const end = target.getBoundingClientRect().top + start - 24; // matches scroll-margin-top
@@ -72,19 +143,25 @@ function Home() {
     let startTime: number | null = null;
 
     function easeInOutCubic(t: number) {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     function step(timestamp: number) {
-        if (startTime === null) startTime = timestamp;
-        const elapsed = timestamp - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        window.scrollTo(0, start + distance * easeInOutCubic(progress));
-        if (progress < 1) requestAnimationFrame(step);
+      if (startTime === null) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, start + distance * easeInOutCubic(progress));
+
+      if (progress < 1) {
+        scrollAnimationFrameRef.current = requestAnimationFrame(step);
+      } else {
+        scrollAnimationFrameRef.current = null;
+      }
     }
 
-    requestAnimationFrame(step);
-}
+    scrollAnimationFrameRef.current = requestAnimationFrame(step);
+  }
+
   return (
     <div className={styles.home}>
       {/* ── Hero ── */}
@@ -112,7 +189,12 @@ function Home() {
             onClick={scrollToSims}
           >
             Start Simulating
-            <span className={styles.heroCtaArrow}>↓</span>
+            <span className={styles.heroCtaArrow}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <polyline points="19 12 12 19 5 12" />
+              </svg>
+            </span>
           </button>
           <a
         
@@ -154,7 +236,7 @@ function Home() {
                 className={styles.simIcon}
                 style={{ background: sim.iconBg }}
               >
-                <span>{sim.icon}</span>
+                <sim.IconComponent color={sim.iconColor} />
               </div>
 
               <h3 className={styles.simTitle}>{sim.title}</h3>
@@ -182,7 +264,11 @@ function Home() {
                   className={styles.simArrow}
                   style={{ color: sim.iconColor }}
                 >
-                  Open →
+                  Open
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
                 </div>
               )}
             </button>

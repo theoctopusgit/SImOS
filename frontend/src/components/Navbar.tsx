@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 
 const NAV_ITEMS = [
@@ -29,10 +29,10 @@ function Navbar() {
               <line x1="9" y1="3" x2="9" y2="21" />
             </svg>
           </button>
-          <button type="button" className="nav-logo-btn" onClick={() => goTo("/")}>
+          <Link to="/" className="nav-logo-btn" onClick={function () { setDrawerOpen(false); }}>
             <h1 className="nav-logo">SIm<span>OS</span></h1>
             <p className="nav-subtitle">Operating System Simulator</p>
-          </button>
+          </Link>
         </div>
         <nav className="nav-links">
           <button type="button" onClick={() => window.open("https://github.com/RodneyGG/SImOS", "_blank")}>GitHub</button>

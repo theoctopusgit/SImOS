@@ -364,6 +364,25 @@
   box-shadow: 0 4px 14px rgba(59, 122, 106, 0.28);
 }
 
+.disk-validation-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  border: 1.5px solid rgba(217, 83, 79, 0.25);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  animation: fadeSlideUp 0.25s ease;
+}
+
+.disk-validation-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
 .disk-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

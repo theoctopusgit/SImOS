@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./DiskScheduling.css";
 
 interface SeekMovement {
@@ -205,6 +205,7 @@ export const DiskScheduling: React.FC = () => {
   const [movements, setMovements] = useState<SeekMovement[]>([]);
   const [totalMovement, setTotalMovement] = useState<number>(0);
   const [hasRun, setHasRun] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string>("");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -214,15 +215,17 @@ export const DiskScheduling: React.FC = () => {
 
   const showsDirectionInput = ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm);
 
-  function handleExecuteRun(e?: React.FormEvent, isMount = false) {
+  const handleExecuteRun = useCallback(function (e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
 
     if (algorithm === "CHOOSE ALGORITHM") {
       if (!isMount) {
-        alert("Please select a disk scheduling algorithm.");
+        setValidationError("Please select a disk scheduling algorithm.");
       }
       return;
     }
+
+    setValidationError("");
 
     const parsedQueue = parseQueue(queueInput);
     const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
@@ -244,11 +247,42 @@ export const DiskScheduling: React.FC = () => {
     setMovements(computedMovements);
     setTotalMovement(computedTotal);
     setHasRun(true);
-  }
+  }, [algorithm, queueInput, initialHead]);
 
   useEffect(function () {
     handleExecuteRun(undefined, true);
   }, []);
+
+  // Keep the canvas resolution in sync with its CSS size and redraw on viewport resize
+  useEffect(function () {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const handleResize = function () {
+      const dpr = window.devicePixelRatio || 1;
+      const { width: cssWidth, height: cssHeight } = canvas.getBoundingClientRect();
+
+      const nextWidth = Math.max(1, Math.floor(cssWidth * dpr));
+      const nextHeight = Math.max(1, Math.floor(cssHeight * dpr));
+
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+
+      handleExecuteRun(undefined, true);
+    };
+
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
+
+    return function () {
+      observer.disconnect();
+    };
+  }, [handleExecuteRun]);
 
   useEffect(function () {
     const canvas = canvasRef.current;
@@ -352,14 +386,14 @@ export const DiskScheduling: React.FC = () => {
     });
   }, [sequence, maxTrack]);
 
-  const requestCount = Math.max(sequence.length - 1, 0);
+  // Requests served should only count real I/O requests, not synthetic sweep endpoints
+  const requestCount = parseQueue(queueInput).length;
   const sequenceLabel = sequence.join(" -> ");
 
   return (
     <div className="disk-app">
       <div className="disk-tabs">
         <button type="button" className="disk-tab active">Algorithm Simulation</button>
-        <button type="button" className="disk-tab">Compare Algorithms</button>
       </div>
 
       <div className="disk-content">
@@ -419,9 +453,11 @@ export const DiskScheduling: React.FC = () => {
                 <select
                   value={algorithm}
                   onChange={function (e) {
+                    setValidationError("");
+                    const previousAlgorithm = algorithm;
                     const nextAlgorithm = e.target.value as DiskAlgorithm;
                     setAlgorithm(nextAlgorithm);
-                    if (ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
+                    if (!ALGORITHMS_REQUIRING_DIRECTION.includes(previousAlgorithm) && ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
                       setDirection("towards-roof");
                     }
                     setHasRun(false);
@@ -505,6 +541,13 @@ export const DiskScheduling: React.FC = () => {
                 />
               </div>
             </form>
+
+            {validationError && (
+              <div className="disk-validation-error">
+                <span className="disk-validation-icon">⚠</span>
+                {validationError}
+              </div>
+            )}
 
             <div className="disk-summary-grid">
               <div className="disk-summary-card">
