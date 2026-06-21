@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Home.module.css";
+
 
 /* SVG icon components for simulation cards */
 function CpuIcon({ color }: { color: string }) {
@@ -107,6 +108,27 @@ const SIMULATIONS = [
 ];
 
 function Home() {
+  const FULL_TITLE = "SImOS";
+  const ACCENT_START = 3; // index where "OS" begins, for color split
+
+  const [typedTitle, setTypedTitle] = useState("");
+
+  useEffect(function () {
+    let i = 0;
+    const typingSpeed = 130; // ms per character — tweak for faster/slower typing
+
+    const interval = setInterval(function () {
+      i++;
+      setTypedTitle(FULL_TITLE.slice(0, i));
+      if (i >= FULL_TITLE.length) {
+        clearInterval(interval);
+      }
+    }, typingSpeed);
+
+    return function () {
+      clearInterval(interval);
+    };
+  }, []);
   const navigate = useNavigate();
   const simRef = useRef<HTMLDivElement>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
@@ -122,20 +144,6 @@ function Home() {
   function scrollToSims() {
     const target = simRef.current;
     if (!target) return;
-
-    // Honor prefers-reduced-motion: jump instantly instead of animating
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      target.scrollIntoView({ block: "start" });
-      return;
-    }
-
-    // Cancel any in-flight animation before starting a new one
-    if (scrollAnimationFrameRef.current !== null) {
-      cancelAnimationFrame(scrollAnimationFrameRef.current);
-      scrollAnimationFrameRef.current = null;
-    }
-
     const start = window.scrollY;
     const end = target.getBoundingClientRect().top + start - 24; // matches scroll-margin-top
     const distance = end - start;
@@ -151,15 +159,10 @@ function Home() {
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       window.scrollTo(0, start + distance * easeInOutCubic(progress));
-
-      if (progress < 1) {
-        scrollAnimationFrameRef.current = requestAnimationFrame(step);
-      } else {
-        scrollAnimationFrameRef.current = null;
-      }
+      if (progress < 1) requestAnimationFrame(step);
     }
 
-    scrollAnimationFrameRef.current = requestAnimationFrame(step);
+    requestAnimationFrame(step);
   }
 
   return (
@@ -172,7 +175,9 @@ function Home() {
         </div>
 
         <h1 className={styles.heroTitle}>
-          SIm<span className={styles.heroAccent}>OS</span>
+        {typedTitle.slice(0, ACCENT_START)}
+          <span className={styles.heroAccent}>{typedTitle.slice(ACCENT_START)}</span>
+          <span className={styles.heroCursor} aria-hidden="true" />
         </h1>
 
         <p className={styles.heroSub}>
@@ -196,11 +201,6 @@ function Home() {
               </svg>
             </span>
           </button>
-          <a
-        
-          >
-          
-          </a>
         </div>
 
 

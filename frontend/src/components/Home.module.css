@@ -47,6 +47,20 @@
    HERO SECTION
 ══════════════════════════════════ */
 
+.heroCursor {
+  display: inline-block;
+  width: 0.06em;
+  height: 0.85em;
+  background: var(--text-heading);
+  margin-left: 4px;
+  vertical-align: -0.05em;
+  animation: blink 0.9s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
 .hero {
   display: flex;
   flex-direction: column;
@@ -121,8 +135,9 @@
   margin: 0 0 28px;
   position: relative;
   z-index: 1;
-  animation: fadeDown 0.55s 0.05s ease both;
 }
+ 
+
 
 .heroAccent {
   color: var(--accent);
