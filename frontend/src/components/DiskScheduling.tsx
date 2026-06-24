@@ -67,6 +67,7 @@ export const DiskScheduling: React.FC = () => {
   const [movements, setMovements] = useState<SeekMovement[]>([]);
   const [totalMovement, setTotalMovement] = useState<number>(0);
   const [hasRun, setHasRun] = useState<boolean>(false);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -78,6 +79,7 @@ export const DiskScheduling: React.FC = () => {
 
   async function handleExecuteRun(e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
+    if (isRunning) return;
 
     if (algorithm === "CHOOSE ALGORITHM") {
       if (!isMount) {
@@ -90,7 +92,15 @@ export const DiskScheduling: React.FC = () => {
     const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
     const requestedMaxTrack = maxTrackInput === "" ? DEFAULT_MAX_TRACK : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
 
+    setIsRunning(true);
+    setHasRun(false);
+
     try {
+      // Simulate real-time processing and disk head movement delay
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 1200);
+      });
+
       const response = await fetch("http://localhost:8000/api/disk-scheduling", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,6 +115,7 @@ export const DiskScheduling: React.FC = () => {
 
       if (!response.ok) {
         alert("Backend error: " + response.statusText);
+        setIsRunning(false);
         return;
       }
 
@@ -122,12 +133,10 @@ export const DiskScheduling: React.FC = () => {
       if (!isMount) {
         alert("Failed to connect to backend.");
       }
+    } finally {
+      setIsRunning(false);
     }
   }
-
-  useEffect(function () {
-    handleExecuteRun(undefined, true);
-  }, []);
 
   useEffect(function () {
     const canvas = canvasRef.current;
@@ -238,7 +247,6 @@ export const DiskScheduling: React.FC = () => {
     <div className="disk-app">
       <div className="disk-tabs">
         <button type="button" className="disk-tab active">Algorithm Simulation</button>
-        <button type="button" className="disk-tab">Compare Algorithms</button>
       </div>
 
       <div className="disk-content">
@@ -282,12 +290,19 @@ export const DiskScheduling: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className="disk-ctrl-btn run-btn"
+                  className={`disk-ctrl-btn run-btn ${isRunning ? "loading" : ""}`}
                   onClick={function () {
                     handleExecuteRun();
                   }}
+                  disabled={isRunning}
                 >
-                  ▶ Run
+                  {isRunning ? (
+                    <>
+                      <span className="spinner"></span> Running...
+                    </>
+                  ) : (
+                    "▶ Run"
+                  )}
                 </button>
               </div>
             </div>
@@ -405,79 +420,81 @@ export const DiskScheduling: React.FC = () => {
             </div>
           </section>
 
-          <section className="disk-results">
-            <div className="disk-results-header">
-              <div>
-                <h2>Simulation Results</h2>
-                <p className="disk-results-subtitle">
-                  {selectedAlgorithm.label} {hasRun ? "· Physical head traversal across disk tracks" : ""}
-                </p>
-              </div>
-            </div>
-
-            <div className="disk-chart-shell">
-              <div className="disk-chart-meta">
-                <span className="disk-chart-badge">Track Range: {DISK_MIN}-{maxTrack}</span>
-                <span className="disk-chart-sequence">Sequence: {sequenceLabel || "—"}</span>
+          {hasRun && (
+            <section className="disk-results">
+              <div className="disk-results-header">
+                <div>
+                  <h2>Simulation Results</h2>
+                  <p className="disk-results-subtitle">
+                    {selectedAlgorithm.label} · Physical head traversal across disk tracks
+                  </p>
+                </div>
               </div>
 
-              <div className="disk-canvas-wrap">
-                <canvas ref={canvasRef} className="disk-canvas" />
-              </div>
-            </div>
+              <div className="disk-chart-shell">
+                <div className="disk-chart-meta">
+                  <span className="disk-chart-badge">Track Range: {DISK_MIN}-{maxTrack}</span>
+                  <span className="disk-chart-sequence">Sequence: {sequenceLabel || "—"}</span>
+                </div>
 
-            <div className="disk-result-table-wrapper">
-              <h3>Computation Log</h3>
-              <div className="disk-table-container">
-                {movements.length === 0 ? (
-                  <div className="disk-empty-state">
-                    <div className="disk-empty-icon">💽</div>
-                    <h4>No movements yet</h4>
-                    <p>Run the simulation to generate the disk head movement trace</p>
-                  </div>
-                ) : (
-                  <table className="disk-result-table">
-                    <thead>
-                      <tr>
-                        <th>Step</th>
-                        <th>Head Seek Path</th>
-                        <th>Seek Distance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {movements.map(function (move) {
-                        return (
-                          <tr key={move.step + "-" + move.from + "-" + move.to}>
-                            <td className="disk-step-cell">
-                              <span
-                                className="step-bullet"
-                                style={{ backgroundColor: STEP_COLORS[(move.step - 1) % STEP_COLORS.length] }}
-                              />
-                              S{move.step}
-                            </td>
-                            <td>
-                              <span className="disk-path-text">
-                                <span className="disk-track-pill">{move.from}</span>
-                                <span className="disk-arrow">{">"}</span>
-                                <span className="disk-track-pill">{move.to}</span>
-                              </span>
-                            </td>
-                            <td className="disk-distance-cell">{move.distance} tracks</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={2} className="disk-foot-label"><strong>Total Head Movement</strong></td>
-                        <td className="disk-foot-total"><strong>{totalMovement} tracks</strong></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                )}
+                <div className="disk-canvas-wrap">
+                  <canvas ref={canvasRef} className="disk-canvas" />
+                </div>
               </div>
-            </div>
-          </section>
+
+              <div className="disk-result-table-wrapper">
+                <h3>Computation Log</h3>
+                <div className="disk-table-container">
+                  {movements.length === 0 ? (
+                    <div className="disk-empty-state">
+                      <div className="disk-empty-icon">💽</div>
+                      <h4>No movements yet</h4>
+                      <p>Run the simulation to generate the disk head movement trace</p>
+                    </div>
+                  ) : (
+                    <table className="disk-result-table">
+                      <thead>
+                        <tr>
+                          <th>Step</th>
+                          <th>Head Seek Path</th>
+                          <th>Seek Distance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {movements.map(function (move) {
+                          return (
+                            <tr key={move.step + "-" + move.from + "-" + move.to}>
+                              <td className="disk-step-cell">
+                                <span
+                                  className="step-bullet"
+                                  style={{ backgroundColor: STEP_COLORS[(move.step - 1) % STEP_COLORS.length] }}
+                                />
+                                S{move.step}
+                              </td>
+                              <td>
+                                <span className="disk-path-text">
+                                  <span className="disk-track-pill">{move.from}</span>
+                                  <span className="disk-arrow">{">"}</span>
+                                  <span className="disk-track-pill">{move.to}</span>
+                                </span>
+                              </td>
+                              <td className="disk-distance-cell">{move.distance} tracks</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={2} className="disk-foot-label"><strong>Total Head Movement</strong></td>
+                          <td className="disk-foot-total"><strong>{totalMovement} tracks</strong></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>
