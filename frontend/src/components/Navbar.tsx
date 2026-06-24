@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 
 const NAV_ITEMS = [
   { label: "CPU Scheduling", path: "/cpu-scheduling", icon: "" },
   { label: "Memory Management", path: "/memory-management", icon: "" },
   { label: "Virtual Memory", path: "/virtual-memory", icon: "" },
+  { label: "Mass Storage Management", path: "/mass-storage", icon: "" },
 ];
 
 function Navbar() {
@@ -23,15 +24,15 @@ function Navbar() {
       <header className="nav-header">
         <div className="nav-logo-section">
           <button type="button" className="nav-menu-btn" onClick={function () { setDrawerOpen(!drawerOpen); }} aria-label="Toggle navigation">
-            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="18" height="18" rx="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="3" />
+              <line x1="9.5" y1="4" x2="9.5" y2="20" />
             </svg>
           </button>
-          <button type="button" className="nav-logo-btn" onClick={() => goTo("/")}>
+          <Link to="/" className="nav-logo-btn" onClick={function () { setDrawerOpen(false); }}>
             <h1 className="nav-logo">SIm<span>OS</span></h1>
             <p className="nav-subtitle">Operating System Simulator</p>
-          </button>
+          </Link>
         </div>
         <nav className="nav-links">
           <button type="button" onClick={() => window.open("https://github.com/RodneyGG/SImOS", "_blank")}>GitHub</button>
@@ -39,7 +40,7 @@ function Navbar() {
           <button type="button" onClick={() => goTo("/about")}>About</button>
           <button type="button" className="nav-theme-toggle">◐</button>
         </nav>
-</header>
+      </header>
       {/* Overlay */}
       {drawerOpen && <div className="drawer-overlay" onClick={function () { setDrawerOpen(false); }} />}
 

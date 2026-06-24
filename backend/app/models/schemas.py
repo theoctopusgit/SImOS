@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List
 
 class ProcessInput(BaseModel):
     id: str
@@ -105,3 +107,22 @@ class PageReplacementResponse(BaseModel):
     totalPageFaults: int
     totalHits: int
     steps: List[PageReplacementStep]
+class DiskScheduleRequest(BaseModel):
+    head: int
+    queue: List[int]
+    algorithm: str
+    maxTrack: int = 200
+    direction: str = "towards-roof"
+
+class SeekMovement(BaseModel):
+    step: int
+    from_track: int = Field(..., alias="from")
+    to: int
+    distance: int
+
+class DiskScheduleResponse(BaseModel):
+    sequence: List[int]
+    movements: List[SeekMovement]
+    totalMovement: int
+    maxTrack: int
+

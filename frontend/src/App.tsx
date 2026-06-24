@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import IntroLogo from "./components/IntroLogo";
 import Navbar from "./components/Navbar";
+import Home from "./components/Home";
 import CPU_Scheduling from "./components/CPU_Scheduling";
 import Memory_Management from "./components/MemoryManagement";
 import "./App.css";
@@ -13,8 +14,9 @@ import Home from "./components/Home"
 
 
 
+import About from "./components/About";
 import ScrollToTop from "./components/ScrollToTop";
-
+import DiskScheduling from "./components/DiskScheduling";
 
 
 function AppContent() {
@@ -32,6 +34,8 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/cpu-scheduling" replace />} />
           <Route path="/about" element={<About />} />
 
+          <Route path="/mass-storage" element={<DiskScheduling />} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
  
 
