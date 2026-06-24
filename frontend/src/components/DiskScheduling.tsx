@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./DiskScheduling.css";
 
 interface SeekMovement {
@@ -67,7 +67,7 @@ export const DiskScheduling: React.FC = () => {
   const [movements, setMovements] = useState<SeekMovement[]>([]);
   const [totalMovement, setTotalMovement] = useState<number>(0);
   const [hasRun, setHasRun] = useState<boolean>(false);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string>("");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -77,47 +77,40 @@ export const DiskScheduling: React.FC = () => {
 
   const showsDirectionInput = ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm);
 
-  async function handleExecuteRun(e?: React.FormEvent, isMount = false) {
+  const handleExecuteRun = useCallback(function (e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
     if (isRunning) return;
 
     if (algorithm === "CHOOSE ALGORITHM") {
       if (!isMount) {
-        alert("Please select a disk scheduling algorithm.");
+        setValidationError("Please select a disk scheduling algorithm.");
       }
       return;
     }
+
+    setValidationError("");
 
     const parsedQueue = parseQueue(queueInput);
     const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
     const requestedMaxTrack = maxTrackInput === "" ? DEFAULT_MAX_TRACK : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
 
-    setIsRunning(true);
-    setHasRun(false);
+    const maxInput = Math.max(safeHead, ...parsedQueue);
+    const computedMaxTrack = Math.max(requestedMaxTrack, maxInput > requestedMaxTrack ? Math.ceil(maxInput / 50) * 50 : requestedMaxTrack);
+    setMaxTrack(computedMaxTrack);
 
-    try {
-      // Simulate real-time processing and disk head movement delay
-      await new Promise(function (resolve) {
-        setTimeout(resolve, 1200);
-      });
+    const computedSequence = computeSequence(algorithm, safeHead, parsedQueue, computedMaxTrack, direction);
+    const computedMovements = buildMovements(computedSequence);
+    const computedTotal = computedMovements.reduce(function (sum, move) {
+      return sum + move.distance;
+    }, 0);
 
-      const response = await fetch("http://localhost:8000/api/disk-scheduling", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          head: safeHead,
-          queue: parsedQueue,
-          algorithm: algorithm,
-          maxTrack: requestedMaxTrack,
-          direction: direction,
-        }),
-      });
-
-      if (!response.ok) {
-        alert("Backend error: " + response.statusText);
-        setIsRunning(false);
-        return;
-      }
+    setInitialHead(safeHead);
+    setDisplayedInitialHead(safeHead);
+    setSequence(computedSequence);
+    setMovements(computedMovements);
+    setTotalMovement(computedTotal);
+    setHasRun(true);
+  }, [algorithm, queueInput, initialHead]);
 
       const data = await response.json();
 
@@ -137,6 +130,37 @@ export const DiskScheduling: React.FC = () => {
       setIsRunning(false);
     }
   }
+
+  // Keep the canvas resolution in sync with its CSS size and redraw on viewport resize
+  useEffect(function () {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const handleResize = function () {
+      const dpr = window.devicePixelRatio || 1;
+      const { width: cssWidth, height: cssHeight } = canvas.getBoundingClientRect();
+
+      const nextWidth = Math.max(1, Math.floor(cssWidth * dpr));
+      const nextHeight = Math.max(1, Math.floor(cssHeight * dpr));
+
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+
+      handleExecuteRun(undefined, true);
+    };
+
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
+
+    return function () {
+      observer.disconnect();
+    };
+  }, [handleExecuteRun]);
 
   useEffect(function () {
     const canvas = canvasRef.current;
@@ -240,7 +264,8 @@ export const DiskScheduling: React.FC = () => {
     });
   }, [sequence, maxTrack]);
 
-  const requestCount = Math.max(sequence.length - 1, 0);
+  // Requests served should only count real I/O requests, not synthetic sweep endpoints
+  const requestCount = parseQueue(queueInput).length;
   const sequenceLabel = sequence.join(" -> ");
 
   return (
@@ -313,9 +338,11 @@ export const DiskScheduling: React.FC = () => {
                 <select
                   value={algorithm}
                   onChange={function (e) {
+                    setValidationError("");
+                    const previousAlgorithm = algorithm;
                     const nextAlgorithm = e.target.value as DiskAlgorithm;
                     setAlgorithm(nextAlgorithm);
-                    if (ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
+                    if (!ALGORITHMS_REQUIRING_DIRECTION.includes(previousAlgorithm) && ALGORITHMS_REQUIRING_DIRECTION.includes(nextAlgorithm)) {
                       setDirection("towards-roof");
                     }
                     setHasRun(false);
@@ -399,6 +426,13 @@ export const DiskScheduling: React.FC = () => {
                 />
               </div>
             </form>
+
+            {validationError && (
+              <div className="disk-validation-error">
+                <span className="disk-validation-icon">⚠</span>
+                {validationError}
+              </div>
+            )}
 
             <div className="disk-summary-grid">
               <div className="disk-summary-card">
