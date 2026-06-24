@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Home.module.css";
+
 
 /* SVG icon components for simulation cards */
 function CpuIcon({ color }: { color: string }) {
@@ -107,6 +108,27 @@ const SIMULATIONS = [
 ];
 
 function Home() {
+  const FULL_TITLE = "SImOS";
+  const ACCENT_START = 3; // index where "OS" begins, for color split
+
+  const [typedTitle, setTypedTitle] = useState("");
+
+  useEffect(function () {
+    let i = 0;
+    const typingSpeed = 130; // ms per character — tweak for faster/slower typing
+
+    const interval = setInterval(function () {
+      i++;
+      setTypedTitle(FULL_TITLE.slice(0, i));
+      if (i >= FULL_TITLE.length) {
+        clearInterval(interval);
+      }
+    }, typingSpeed);
+
+    return function () {
+      clearInterval(interval);
+    };
+  }, []);
   const navigate = useNavigate();
   const simRef = useRef<HTMLDivElement>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
@@ -154,7 +176,9 @@ function Home() {
         </div>
 
         <h1 className={styles.heroTitle}>
-          SIm<span className={styles.heroAccent}>OS</span>
+        {typedTitle.slice(0, ACCENT_START)}
+          <span className={styles.heroAccent}>{typedTitle.slice(ACCENT_START)}</span>
+          <span className={styles.heroCursor} aria-hidden="true" />
         </h1>
 
         <p className={styles.heroSub}>
@@ -178,11 +202,6 @@ function Home() {
               </svg>
             </span>
           </button>
-          <a
-        
-          >
-          
-          </a>
         </div>
 
 
