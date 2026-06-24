@@ -71,13 +71,15 @@ def run_look(head: int, queue: List[int], direction: str) -> List[int]:
         return [head] + left + right
 
 def run_clook(head: int, queue: List[int], direction: str) -> List[int]:
-    left = sorted([v for v in queue if v < head])
-    right = sorted([v for v in queue if v >= head])
-
     if direction == "towards-roof":
+        left = sorted([v for v in queue if v < head])
+        right = sorted([v for v in queue if v >= head])
         return [head] + right + left
     else:
+        left = sorted([v for v in queue if v < head], reverse=True)
+        right = sorted([v for v in queue if v >= head], reverse=True)
         return [head] + left + right
+
 
 def build_movements(sequence: List[int]) -> List[Dict[str, Any]]:
     steps = []
