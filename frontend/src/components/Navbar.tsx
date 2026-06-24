@@ -6,7 +6,7 @@ const NAV_ITEMS = [
   { label: "CPU Scheduling", path: "/cpu-scheduling", icon: "" },
   { label: "Memory Management", path: "/memory-management", icon: "" },
   { label: "Virtual Memory", path: "/virtual-memory", icon: "" },
-  { label: "Disk Scheduling", path: "/mass-storage", icon: "" },
+  { label: "Mass Storage Management", path: "/mass-storage", icon: "" },
 ];
 
 function Navbar() {
@@ -40,7 +40,7 @@ function Navbar() {
           <button type="button">About</button>
           <button type="button" className="nav-theme-toggle">◐</button>
         </nav>
-</header>
+      </header>
       {/* Overlay */}
       {drawerOpen && <div className="drawer-overlay" onClick={function () { setDrawerOpen(false); }} />}
 

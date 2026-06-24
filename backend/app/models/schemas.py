@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 class ProcessInput(BaseModel):
@@ -43,3 +43,23 @@ class CPUCompareResult(BaseModel):
 
 class CPUCompareResponse(BaseModel):
     results: List[CPUCompareResult]
+
+class DiskScheduleRequest(BaseModel):
+    head: int
+    queue: List[int]
+    algorithm: str
+    maxTrack: int = 200
+    direction: str = "towards-roof"
+
+class SeekMovement(BaseModel):
+    step: int
+    from_track: int = Field(..., alias="from")
+    to: int
+    distance: int
+
+class DiskScheduleResponse(BaseModel):
+    sequence: List[int]
+    movements: List[SeekMovement]
+    totalMovement: int
+    maxTrack: int
+

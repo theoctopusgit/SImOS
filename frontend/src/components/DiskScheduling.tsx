@@ -53,145 +53,7 @@ function parseQueue(input: string): number[] {
     });
 }
 
-function buildMovements(sequence: number[]): SeekMovement[] {
-  const steps: SeekMovement[] = [];
-
-  for (let i = 0; i < sequence.length - 1; i++) {
-    const from = sequence[i];
-    const to = sequence[i + 1];
-    steps.push({
-      step: i + 1,
-      from,
-      to,
-      distance: Math.abs(to - from),
-    });
-  }
-
-  return steps;
-}
-
-function runFCFS(head: number, queue: number[]): number[] {
-  return [head, ...queue];
-}
-
-function runSSTF(head: number, queue: number[]): number[] {
-  const pending = [...queue];
-  const sequence = [head];
-  let current = head;
-
-  while (pending.length > 0) {
-    let bestIndex = 0;
-    let bestDistance = Math.abs(pending[0] - current);
-
-    for (let i = 1; i < pending.length; i++) {
-      const distance = Math.abs(pending[i] - current);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = i;
-      }
-    }
-
-    const next = pending.splice(bestIndex, 1)[0];
-    sequence.push(next);
-    current = next;
-  }
-
-  return sequence;
-}
-
-function runSCAN(head: number, queue: number[], maxVal: number, direction: DiskDirection): number[] {
-  const left = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return b - a; });
-  const right = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
-
-  if (direction === "towards-roof") {
-    const sequence = [head, ...right];
-
-    if (sequence[sequence.length - 1] !== maxVal) {
-      sequence.push(maxVal);
-    }
-
-    return [...sequence, ...left];
-  }
-
-  const sequence = [head, ...left];
-
-  if (sequence[sequence.length - 1] !== DISK_MIN) {
-    sequence.push(DISK_MIN);
-  }
-
-  return [...sequence, ...right];
-}
-
-function runCSCAN(head: number, queue: number[], maxVal: number, direction: DiskDirection): number[] {
-  const leftAsc = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return a - b; });
-  const rightAsc = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
-  const leftDesc = [...leftAsc].reverse();
-  const rightDesc = [...rightAsc].reverse();
-
-  if (direction === "towards-roof") {
-    const sequence = [head, ...rightAsc];
-
-    if (sequence[sequence.length - 1] !== maxVal) {
-      sequence.push(maxVal);
-    }
-
-    sequence.push(DISK_MIN);
-
-    return [...sequence, ...leftAsc];
-  }
-
-  const sequence = [head, ...leftDesc];
-
-  if (sequence[sequence.length - 1] !== DISK_MIN) {
-    sequence.push(DISK_MIN);
-  }
-
-  sequence.push(maxVal);
-
-  return [...sequence, ...rightDesc];
-}
-
-function runLOOK(head: number, queue: number[], direction: DiskDirection): number[] {
-  const left = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return b - a; });
-  const right = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
-
-  if (direction === "towards-roof") {
-    return [head, ...right, ...left];
-  }
-
-  return [head, ...left, ...right];
-}
-
-function runCLOOK(head: number, queue: number[], direction: DiskDirection): number[] {
-  const left = queue.filter(function (value) { return value < head; }).sort(function (a, b) { return a - b; });
-  const right = queue.filter(function (value) { return value >= head; }).sort(function (a, b) { return a - b; });
-
-  if (direction === "towards-roof") {
-    return [head, ...right, ...left];
-  }
-
-  return [head, ...left, ...right];
-}
-
-function computeSequence(algorithm: DiskAlgorithm, head: number, queue: number[], maxVal: number, direction: DiskDirection): number[] {
-  if (queue.length === 0) return [head];
-
-  switch (algorithm) {
-    case "SSTF":
-      return runSSTF(head, queue);
-    case "SCAN":
-      return runSCAN(head, queue, maxVal, direction);
-    case "C-SCAN":
-      return runCSCAN(head, queue, maxVal, direction);
-    case "LOOK":
-      return runLOOK(head, queue, direction);
-    case "C-LOOK":
-      return runCLOOK(head, queue, direction);
-    case "FCFS":
-    default:
-      return runFCFS(head, queue);
-  }
-}
+// Backend algorithms are now handled on the server side
 
 export const DiskScheduling: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE ALGORITHM");
@@ -214,7 +76,7 @@ export const DiskScheduling: React.FC = () => {
 
   const showsDirectionInput = ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm);
 
-  function handleExecuteRun(e?: React.FormEvent, isMount = false) {
+  async function handleExecuteRun(e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
 
     if (algorithm === "CHOOSE ALGORITHM") {
@@ -228,22 +90,39 @@ export const DiskScheduling: React.FC = () => {
     const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
     const requestedMaxTrack = maxTrackInput === "" ? DEFAULT_MAX_TRACK : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
 
-    const maxInput = Math.max(safeHead, ...parsedQueue);
-    const computedMaxTrack = Math.max(requestedMaxTrack, maxInput > requestedMaxTrack ? Math.ceil(maxInput / 50) * 50 : requestedMaxTrack);
-    setMaxTrack(computedMaxTrack);
+    try {
+      const response = await fetch("http://localhost:8000/api/disk-scheduling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          head: safeHead,
+          queue: parsedQueue,
+          algorithm: algorithm,
+          maxTrack: requestedMaxTrack,
+          direction: direction,
+        }),
+      });
 
-    const computedSequence = computeSequence(algorithm, safeHead, parsedQueue, computedMaxTrack, direction);
-    const computedMovements = buildMovements(computedSequence);
-    const computedTotal = computedMovements.reduce(function (sum, move) {
-      return sum + move.distance;
-    }, 0);
+      if (!response.ok) {
+        alert("Backend error: " + response.statusText);
+        return;
+      }
 
-    setInitialHead(safeHead);
-    setDisplayedInitialHead(safeHead);
-    setSequence(computedSequence);
-    setMovements(computedMovements);
-    setTotalMovement(computedTotal);
-    setHasRun(true);
+      const data = await response.json();
+
+      setMaxTrack(data.maxTrack);
+      setInitialHead(safeHead);
+      setDisplayedInitialHead(safeHead);
+      setSequence(data.sequence);
+      setMovements(data.movements);
+      setTotalMovement(data.totalMovement);
+      setHasRun(true);
+    } catch (error) {
+      console.error("Error executing disk scheduling simulation:", error);
+      if (!isMount) {
+        alert("Failed to connect to backend.");
+      }
+    }
   }
 
   useEffect(function () {
