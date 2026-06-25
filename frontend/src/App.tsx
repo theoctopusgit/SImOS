@@ -3,44 +3,24 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import IntroLogo from "./components/IntroLogo";
 import Navbar from "./components/Navbar";
 import Home from "./components/Home";
+import About from "./components/About";
 import CPU_Scheduling from "./components/CPU_Scheduling";
 import Memory_Management from "./components/MemoryManagement";
-import "./App.css";
 import VirtualMemory from "./components/VirtualMemory";
-
-import About from "./components/About";
-
-import Home from "./components/Home"
-
-
-
-import About from "./components/About";
-import ScrollToTop from "./components/ScrollToTop";
-import DiskScheduling from "./components/DiskScheduling";
-
+import "./App.css";
 
 function AppContent() {
   return (
     <div className="app-shell">
-      <ScrollToTop />
       <Navbar />
       <div className="app-page">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
           <Route path="/cpu-scheduling" element={<CPU_Scheduling />} />
           <Route path="/memory-management" element={<Memory_Management />} />
           <Route path="/virtual-memory" element={<VirtualMemory />} />
-
-          <Route path="*" element={<Navigate to="/cpu-scheduling" replace />} />
-          <Route path="/about" element={<About />} />
-
-          <Route path="/mass-storage" element={<DiskScheduling />} />
-          <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
- 
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-
         </Routes>
       </div>
     </div>
