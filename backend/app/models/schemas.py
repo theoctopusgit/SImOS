@@ -126,3 +126,40 @@ class DiskScheduleResponse(BaseModel):
     totalMovement: int
     maxTrack: int
 
+# ── Virtual Memory ────────────────────────────────────
+
+class VirtualMemoryRequest(BaseModel):
+    memory_size: int
+    page_size: int
+    algorithm: str
+    access_sequence: List[int]
+
+class VMPageTableEntry(BaseModel):
+    page: int
+    frame: Optional[int]
+    status: str
+
+class VMTLBEntry(BaseModel):
+    page: int
+    frame: int
+    lastAccess: int
+
+class VMFrameCell(BaseModel):
+    page: Optional[int]
+
+class VMAccessLogEntry(BaseModel):
+    step: int
+    page: int
+    tlbHit: bool
+    pageFault: bool
+    framesSnapshot: List[Optional[int]]
+
+class VirtualMemoryResponse(BaseModel):
+    pageTable: List[VMPageTableEntry]
+    tlb: List[VMTLBEntry]
+    frames: List[VMFrameCell]
+    pageFaults: int
+    tlbHits: int
+    tlbMisses: int
+    hitRatio: float
+    accessLog: List[VMAccessLogEntry]
