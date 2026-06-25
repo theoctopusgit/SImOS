@@ -53,7 +53,7 @@ function parseQueue(input: string): number[] {
     });
 }
 
-// Backend algorithms are now handled on the server side
+// Backend algorithms are handled on the server side (FastAPI /api/disk-scheduling)
 
 export const DiskScheduling: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<DiskAlgorithm>("CHOOSE ALGORITHM");
@@ -68,6 +68,7 @@ export const DiskScheduling: React.FC = () => {
   const [totalMovement, setTotalMovement] = useState<number>(0);
   const [hasRun, setHasRun] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string>("");
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -77,7 +78,7 @@ export const DiskScheduling: React.FC = () => {
 
   const showsDirectionInput = ALGORITHMS_REQUIRING_DIRECTION.includes(algorithm);
 
-  const handleExecuteRun = useCallback(function (e?: React.FormEvent, isMount = false) {
+  const handleExecuteRun = useCallback(async function (e?: React.FormEvent, isMount = false) {
     if (e) e.preventDefault();
     if (isRunning) return;
 
@@ -92,25 +93,29 @@ export const DiskScheduling: React.FC = () => {
 
     const parsedQueue = parseQueue(queueInput);
     const safeHead = Math.max(DISK_MIN, initialHead === "" ? DEFAULT_INITIAL_HEAD : initialHead);
-    const requestedMaxTrack = maxTrackInput === "" ? DEFAULT_MAX_TRACK : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
+    const requestedMaxTrack =
+      maxTrackInput === ""
+        ? DEFAULT_MAX_TRACK
+        : Math.max(DEFAULT_MAX_TRACK, parseInt(maxTrackInput, 10) || DEFAULT_MAX_TRACK);
 
-    const maxInput = Math.max(safeHead, ...parsedQueue);
-    const computedMaxTrack = Math.max(requestedMaxTrack, maxInput > requestedMaxTrack ? Math.ceil(maxInput / 50) * 50 : requestedMaxTrack);
-    setMaxTrack(computedMaxTrack);
+    setIsRunning(true);
 
-    const computedSequence = computeSequence(algorithm, safeHead, parsedQueue, computedMaxTrack, direction);
-    const computedMovements = buildMovements(computedSequence);
-    const computedTotal = computedMovements.reduce(function (sum, move) {
-      return sum + move.distance;
-    }, 0);
+    try {
+      const response = await fetch("http://localhost:8000/api/disk-scheduling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          head: safeHead,
+          queue: parsedQueue,
+          algorithm,
+          maxTrack: requestedMaxTrack,
+          direction,
+        }),
+      });
 
-    setInitialHead(safeHead);
-    setDisplayedInitialHead(safeHead);
-    setSequence(computedSequence);
-    setMovements(computedMovements);
-    setTotalMovement(computedTotal);
-    setHasRun(true);
-  }, [algorithm, queueInput, initialHead]);
+      if (!response.ok) {
+        throw new Error(`Backend returned status ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -124,12 +129,12 @@ export const DiskScheduling: React.FC = () => {
     } catch (error) {
       console.error("Error executing disk scheduling simulation:", error);
       if (!isMount) {
-        alert("Failed to connect to backend.");
+        alert("Failed to connect to backend. Make sure the FastAPI server is running on port 8000.");
       }
     } finally {
       setIsRunning(false);
     }
-  }
+  }, [algorithm, queueInput, initialHead, maxTrackInput, direction, isRunning]);
 
   // Keep the canvas resolution in sync with its CSS size and redraw on viewport resize
   useEffect(function () {
@@ -150,8 +155,6 @@ export const DiskScheduling: React.FC = () => {
         canvas.width = nextWidth;
         canvas.height = nextHeight;
       }
-
-      handleExecuteRun(undefined, true);
     };
 
     const observer = new ResizeObserver(handleResize);
@@ -160,7 +163,7 @@ export const DiskScheduling: React.FC = () => {
     return function () {
       observer.disconnect();
     };
-  }, [handleExecuteRun]);
+  }, []);
 
   useEffect(function () {
     const canvas = canvasRef.current;
@@ -244,6 +247,38 @@ export const DiskScheduling: React.FC = () => {
 
     ctx.stroke();
 
+    // Paints an opaque backing plate behind a label so crossing seek lines
+    // never show through the gaps inside/around the glyphs (was causing the
+    // "struck-through" number look when a line passed behind a label).
+    function drawHaloLabel(
+      context: CanvasRenderingContext2D,
+      text: string,
+      x: number,
+      y: number,
+      font: string,
+      color: string
+    ) {
+      context.font = font;
+      context.textAlign = "left";
+
+      const metrics = context.measureText(text);
+      const fontSizeMatch = font.match(/(\d+)px/);
+      const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1], 10) : 11;
+      const paddingX = 3;
+      const paddingY = 2;
+
+      context.fillStyle = "#f4f6f8";
+      context.fillRect(
+        x - paddingX,
+        y - fontSize - paddingY,
+        metrics.width + paddingX * 2,
+        fontSize + paddingY * 2
+      );
+
+      context.fillStyle = color;
+      context.fillText(text, x, y);
+    }
+
     sequence.forEach(function (track, index) {
       const x = paddingLeft + (track / maxTrack) * graphWidth;
       const y = paddingTop + index * stepGap;
@@ -253,14 +288,8 @@ export const DiskScheduling: React.FC = () => {
       ctx.arc(x, y, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = "#4A5559";
-      ctx.font = "600 11px Inter, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText(String(track), x + 8, y + 4);
-
-      ctx.fillStyle = "#a4b0b6";
-      ctx.font = "700 10px Inter, sans-serif";
-      ctx.fillText(index === 0 ? "START" : "S" + index, x + 8, y - 8);
+      drawHaloLabel(ctx, String(track), x + 8, y + 4, "600 11px Inter, sans-serif", "#4A5559");
+      drawHaloLabel(ctx, index === 0 ? "START" : "S" + index, x + 8, y - 8, "700 10px Inter, sans-serif", "#a4b0b6");
     });
   }, [sequence, maxTrack]);
 
