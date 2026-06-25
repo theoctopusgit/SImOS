@@ -59,7 +59,7 @@ function About() {
             </section>
 
             <section className="team-section">
-                <h2 className="team-title">MEET THE KUPALS</h2>
+                <h2 className="team-title">MEET THE MEMBERS</h2>
 
                 <div className="team-grid">
 

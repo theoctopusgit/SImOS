@@ -23,6 +23,7 @@ interface TimelineState {
         processSize: number;
     }[];
     waitingQueue: string[];
+    completedProcesses: string[];
 }
 
 interface MemoryAllocation {
@@ -103,55 +104,257 @@ const DEMO_PROCESSES: Process[] = [
     { id: "P1", size: 212, arrivalTime: 0, burstTime: 6, priority: 2 },
     { id: "P2", size: 417, arrivalTime: 1, burstTime: 8, priority: 1 },
     { id: "P3", size: 112, arrivalTime: 2, burstTime: 3, priority: 4 },
-    { id: "P4", size: 426, arrivalTime: 3, burstTime: 4, priority: 3 },
+    { id: "P4", size: 350, arrivalTime: 3, burstTime: 4, priority: 3 },
 ];
 
-function buildTimeline(blocks: MemBlock[], result: MemoryBackendResult | null): TimelineState[] {
-    if (!result) {
-        return [
-            {
-                time: 0,
-                blocks: blocks.map(function (block) {
-                    return {
-                        id: block.id,
-                        capacity: block.size,
-                        processId: null,
-                        processSize: 0,
-                    };
-                }),
-                waitingQueue: [],
-            },
-        ];
+function buildTimeline(
+    blocks: MemBlock[],
+    result: MemoryBackendResult | null,
+    processes: Process[],
+    allocationAlgorithm: string,
+    compaction: boolean
+): TimelineState[] {
+    var makeEmptyBlocks = function () {
+        if (compaction) {
+            var total = 0;
+            for (var i = 0; i < blocks.length; i++) {
+                total += blocks.length > 0 ? blocks[i].size : 0;
+            }
+            return [{
+                id: "Compacted Memory",
+                capacity: total,
+                processId: null as string | null,
+                processSize: 0,
+            }];
+        }
+        return blocks.map(function (block) {
+            return {
+                id: block.id,
+                capacity: block.size,
+                processId: null as string | null,
+                processSize: 0,
+            };
+        });
+    };
+
+    if (!result || blocks.length === 0 || processes.length === 0) {
+        return [{ time: 0, blocks: makeEmptyBlocks(), waitingQueue: [], completedProcesses: [] }];
     }
 
-    const mappedBlocks = result.memoryBlocks.map(function (block) {
-        const allocation = result.allocations.find(function (item) {
-            return item.block === block.id && item.status === "Allocated";
-        });
+    // Process info lookup
+    var procMap: { [key: string]: Process } = {};
+    processes.forEach(function (p) { procMap[p.id] = p; });
 
-        return {
-            id: block.id,
-            capacity: block.size,
-            processId: allocation ? allocation.process : null,
-            processSize: allocation ? allocation.size : 0,
-        };
+    // Scheduling order from backend
+    var allocOrder = result.allocations.map(function (a) { return a.process; });
+
+    var simBlocks = makeEmptyBlocks();
+    var waitQ: string[] = [];
+    var running: { pid: string; blockIndex: number; endTime: number }[] = [];
+    var arrivedSet: { [pid: string]: boolean } = {};
+    var completedCount = 0;
+    var completedPids: string[] = [];
+    var timeline: TimelineState[] = [];
+    var nfIndex = 0; // next-fit pointer
+
+    function findBlock(processSize: number): number {
+        if (allocationAlgorithm === "Best Fit") {
+            var best = -1, bestCap = Infinity;
+            for (var i = 0; i < simBlocks.length; i++) {
+                if (!simBlocks[i].processId && simBlocks[i].capacity >= processSize && simBlocks[i].capacity < bestCap) {
+                    bestCap = simBlocks[i].capacity; best = i;
+                }
+            }
+            return best;
+        }
+        if (allocationAlgorithm === "Worst Fit") {
+            var worst = -1, worstCap = -1;
+            for (var i = 0; i < simBlocks.length; i++) {
+                if (!simBlocks[i].processId && simBlocks[i].capacity >= processSize && simBlocks[i].capacity > worstCap) {
+                    worstCap = simBlocks[i].capacity; worst = i;
+                }
+            }
+            return worst;
+        }
+        if (allocationAlgorithm === "Next Fit") {
+            var n = simBlocks.length;
+            for (var off = 0; off < n; off++) {
+                var idx = (nfIndex + off) % n;
+                if (!simBlocks[idx].processId && simBlocks[idx].capacity >= processSize) {
+                    nfIndex = (idx + 1) % n;
+                    return idx;
+                }
+            }
+            return -1;
+        }
+        // First Fit
+        for (var i = 0; i < simBlocks.length; i++) {
+            if (!simBlocks[i].processId && simBlocks[i].capacity >= processSize) return i;
+        }
+        return -1;
+    }
+
+    function allocProc(pid: string, time: number): boolean {
+        var proc = procMap[pid];
+        if (!proc) return false;
+        var bi = findBlock(proc.size);
+        if (bi !== -1) {
+            var blockCapacity = simBlocks[bi].capacity;
+            
+            simBlocks[bi].processId = pid;
+            simBlocks[bi].processSize = proc.size;
+
+            if (compaction) {
+                simBlocks[bi].capacity = proc.size;
+
+                if (blockCapacity > proc.size) {
+                    var leftover = blockCapacity - proc.size;
+                    simBlocks.splice(bi + 1, 0, {
+                        id: "Free Space",
+                        capacity: leftover,
+                        processId: null as string | null,
+                        processSize: 0
+                    });
+
+                    // Adjust running block indices because we spliced
+                    for (var r = 0; r < running.length; r++) {
+                        if (running[r].blockIndex > bi) {
+                            running[r].blockIndex++;
+                        }
+                    }
+                }
+            }
+
+            running.push({ pid: pid, blockIndex: bi, endTime: time + proc.burstTime });
+            return true;
+        }
+
+        return false;
+    }
+
+    function tryAllocWaiting(time: number) {
+        var still: string[] = [];
+        for (var w = 0; w < waitQ.length; w++) {
+            if (!allocProc(waitQ[w], time)) still.push(waitQ[w]);
+        }
+        waitQ = still;
+    }
+
+    function snap(time: number) {
+        timeline.push({
+            time: time,
+            blocks: simBlocks.map(function (b) {
+                return { id: b.id, capacity: b.capacity, processId: b.processId, processSize: b.processSize };
+            }),
+            waitingQueue: waitQ.slice(),
+            completedProcesses: completedPids.slice(),
+        });
+    }
+
+    // Max simulation bound
+    var maxArr = 0, totBurst = 0;
+    processes.forEach(function (p) {
+        if (p.arrivalTime > maxArr) maxArr = p.arrivalTime;
+        totBurst += p.burstTime;
     });
+    var maxTime = maxArr + totBurst + 1;
 
-    const waitingQueue = result.allocations
-        .filter(function (item) {
-            return item.status !== "Allocated";
-        })
-        .map(function (item) {
-            return item.process;
-        });
+    // Step 0: empty memory
+    snap(0);
 
-    return [
-        {
-            time: 0,
-            blocks: mappedBlocks,
-            waitingQueue,
-        },
-    ];
+    for (var t = 0; t <= maxTime; t++) {
+        var changed = false;
+
+        // 1. Complete processes whose burst is done
+        var keep: typeof running = [];
+        for (var r = 0; r < running.length; r++) {
+            if (running[r].endTime === t) {
+                simBlocks[running[r].blockIndex].processId = null;
+                simBlocks[running[r].blockIndex].processSize = 0;
+                completedCount++;
+                completedPids.push(running[r].pid);
+                changed = true;
+            } else {
+                keep.push(running[r]);
+            }
+        }
+        running = keep;
+
+        // 2. After freeing blocks, try to allocate waiting processes
+        if (changed && waitQ.length > 0) {
+            var prevLen = waitQ.length;
+            tryAllocWaiting(t);
+            if (waitQ.length !== prevLen) changed = true;
+        }
+
+        // 3. Handle arrivals at time t (in scheduling order)
+        for (var a = 0; a < allocOrder.length; a++) {
+            var pid = allocOrder[a];
+            var proc = procMap[pid];
+            if (proc && proc.arrivalTime === t && !arrivedSet[pid]) {
+                arrivedSet[pid] = true;
+                if (!allocProc(pid, t)) {
+                    waitQ.push(pid);
+                }
+                changed = true;
+            }
+        }
+
+        // 4. After arrivals, try waiting queue again
+        if (waitQ.length > 0) {
+            var prevLen2 = waitQ.length;
+            tryAllocWaiting(t);
+            if (waitQ.length !== prevLen2) changed = true;
+        }
+
+        if (compaction && changed) {
+            var newSimBlocks = [];
+            var totalFree = 0;
+            
+            for (var ci = 0; ci < simBlocks.length; ci++) {
+                if (simBlocks[ci].processId) {
+                    newSimBlocks.push(simBlocks[ci]);
+                } else {
+                    totalFree += simBlocks[ci].capacity;
+                }
+            }
+            
+            if (totalFree > 0) {
+                newSimBlocks.push({
+                    id: "Free Space",
+                    capacity: totalFree,
+                    processId: null as string | null,
+                    processSize: 0
+                });
+            }
+            
+            simBlocks = newSimBlocks;
+
+            for (var r = 0; r < running.length; r++) {
+                var rpid = running[r].pid;
+                for (var sci = 0; sci < simBlocks.length; sci++) {
+                    if (simBlocks[sci].processId === rpid) {
+                        running[r].blockIndex = sci;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (changed) snap(t);
+        if (completedCount === processes.length) break;
+    }
+
+    // Final snapshot: all memory free
+    if (completedCount === processes.length) {
+        var last = timeline[timeline.length - 1];
+        var allFree = last.blocks.every(function (b) { return !b.processId; });
+        if (!allFree) {
+            snap(timeline[timeline.length - 1].time + 1);
+        }
+    }
+
+    return timeline;
 }
 
 function Memory_Management() {
@@ -182,38 +385,77 @@ function Memory_Management() {
     const [autoPlay, setAutoPlay] = useState(false);
     const [speed, setSpeed] = useState(3);
 
-    const [pageString, setPageString] = useState("7 0 1 2 0 3 0 4 2 3 0 3 2");
-    const [frameCount, setFrameCount] = useState(3);
-    const [pageAlgorithm, setPageAlgorithm] = useState<PageAlgorithm>("FIFO");
-    const [pageResult, setPageResult] = useState<PageReplacementResult | null>(null);
-
     const processColorMap = new Map(processes.map(function (p, i) { return [p.id, i]; }));
     const currentCpuAlgoDef = CPU_ALGORITHMS.find((a) => a.name === selectedCpuAlgo)!;
     const isPriority = selectedCpuAlgo === "Priority Scheduling";
     const isRR = selectedCpuAlgo === "Round Robin";
 
-    const activeTimeline = buildTimeline(blocks, backendResult);
+    const activeTimeline = buildTimeline(blocks, backendResult, processes, selectedAlgo, isCompaction);
     const activeTimelineState = activeTimeline[currentTimeIndex] || activeTimeline[0];
 
-    const currentAllocations = backendResult
-        ? backendResult.allocations.map(function (allocation) {
+    // Derive table rows and metrics from the current timeline snapshot
+    var allocatedInBlocks: { [pid: string]: { blockId: string; blockSize: number } } = {};
+    activeTimelineState.blocks.forEach(function (b) {
+        if (b.processId) allocatedInBlocks[b.processId] = { blockId: b.id, blockSize: b.capacity };
+    });
+    var waitingSet: { [pid: string]: boolean } = {};
+    activeTimelineState.waitingQueue.forEach(function (pid) { waitingSet[pid] = true; });
+
+    var completedSet: { [pid: string]: boolean } = {};
+    activeTimelineState.completedProcesses.forEach(function (pid) { completedSet[pid] = true; });
+
+    const currentAllocations = processes.map(function (proc) {
+        var inBlock = allocatedInBlocks[proc.id];
+        if (inBlock) {
             return {
-                processId: allocation.process,
-                processSize: allocation.size,
-                blockId: allocation.block || "—",
-                blockSize: allocation.blockSize || 0,
-                allocated: allocation.status === "Allocated",
+                processId: proc.id,
+                processSize: proc.size,
+                blockId: isCompaction ? "—" : inBlock.blockId,
+                blockSize: isCompaction ? "—" : inBlock.blockSize,
+                allocated: true,
+                status: "Allocated" as string,
             };
-        })
-        : processes.map(function (proc) {
+        }
+        if (waitingSet[proc.id]) {
             return {
                 processId: proc.id,
                 processSize: proc.size,
                 blockId: "—",
                 blockSize: 0,
                 allocated: false,
+                status: "Waiting" as string,
             };
-        });
+        }
+        if (completedSet[proc.id]) {
+            return {
+                processId: proc.id,
+                processSize: proc.size,
+                blockId: "—",
+                blockSize: 0,
+                allocated: false,
+                status: "Completed" as string,
+            };
+        }
+        return {
+            processId: proc.id,
+            processSize: proc.size,
+            blockId: "—",
+            blockSize: 0,
+            allocated: false,
+            status: "Pending" as string,
+        };
+    });
+
+    // Step-aware metrics derived from current timeline state
+    var stepAllocatedCount = activeTimelineState.blocks.filter(function (b) { return b.processId !== null; }).length;
+    var stepInternalFrag = activeTimelineState.blocks.reduce(function (sum, b) {
+        if (b.processId) return sum + (b.capacity - b.processSize);
+        return sum;
+    }, 0);
+    var stepExternalFrag = activeTimelineState.blocks.reduce(function (sum, b) {
+        if (!b.processId) return sum + b.capacity;
+        return sum;
+    }, 0);
 
     function addBlock() {
         const bid = "B" + nextBlockId;
@@ -279,7 +521,6 @@ function Memory_Management() {
         setNextBlockId(1);
         setNextProcId(1);
         setBackendResult(null);
-        setPageResult(null);
         setShowResults(false);
     }
 
@@ -296,7 +537,7 @@ function Memory_Management() {
         if (blocks.length === 0 || processes.length === 0) return;
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/memory-management", {
+            const response = await fetch("http://localhost:8000/api/memory-management", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -318,41 +559,8 @@ function Memory_Management() {
 
             setBackendResult(data);
             setCurrentTimeIndex(0);
-            setAutoPlay(false);
+            setAutoPlay(true);
             setShowResults(true);
-        } catch (error) {
-            console.error(error);
-            alert("Cannot connect to backend");
-        }
-    }
-
-    async function runPageReplacement() {
-        const pages = pageString
-            .split(/[\s,]+/)
-            .filter(function (value) { return value.trim() !== ""; })
-            .map(function (value) { return Number(value); });
-
-        if (pages.length === 0 || frameCount <= 0) return;
-
-        try {
-            const response = await fetch("http://127.0.0.1:8000/api/page-replacement", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    pages,
-                    frames: frameCount,
-                    algorithm: pageAlgorithm,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Page replacement request failed.");
-            }
-
-            const data = (await response.json()) as PageReplacementResult;
-            setPageResult(data);
         } catch (error) {
             console.error(error);
             alert("Cannot connect to backend");
@@ -361,7 +569,10 @@ function Memory_Management() {
 
     useEffect(function () {
         if (!autoPlay || !showResults) return;
-        if (currentTimeIndex >= activeTimeline.length - 1) return;
+        if (currentTimeIndex >= activeTimeline.length - 1) {
+            setAutoPlay(false);
+            return;
+        }
 
         const interval = MEM_SPEED_INTERVALS[speed - 1] || MEM_SPEED_INTERVALS[2];
         const timer = setTimeout(function () {
@@ -382,14 +593,6 @@ function Memory_Management() {
                     onClick={function () { setMainTab("allocation"); }}
                 >
                     Memory Allocation
-                </button>
-
-                <button
-                    type="button"
-                    className={"mem-tab" + (mainTab === "replacement" ? " active" : "")}
-                    onClick={function () { setMainTab("replacement"); }}
-                >
-                    Page Replacement
                 </button>
             </div>
 
@@ -464,7 +667,19 @@ function Memory_Management() {
                                         className="mem-select"
                                         value={isCompaction ? "true" : "false"}
                                         onChange={function (e) {
-                                            setIsCompaction(e.target.value === "true");
+                                            const newIsCompaction = e.target.value === "true";
+                                            setIsCompaction(newIsCompaction);
+                                            
+                                            // If turning ON compaction, merge all blocks into one
+                                            if (newIsCompaction && blocks.length > 0) {
+                                                var totalSize = 0;
+                                                for (var i = 0; i < blocks.length; i++) {
+                                                    totalSize += blocks[i].size;
+                                                }
+                                                setBlocks([{ id: "B1", size: totalSize }]);
+                                                setNextBlockId(2);
+                                            }
+
                                             setBackendResult(null);
                                             setShowResults(false);
                                         }}
@@ -515,7 +730,7 @@ function Memory_Management() {
                                         <button
                                             type="button"
                                             className="mem-add-btn"
-                                            disabled={!formBlockSize || Number(formBlockSize) <= 0}
+                                            disabled={(isCompaction && blocks.length >= 1) || !formBlockSize || Number(formBlockSize) <= 0}
                                             onClick={addBlock}
                                         >
                                             +
@@ -698,21 +913,21 @@ function Memory_Management() {
                                         <div className="mem-metric">
                                             <div className="mem-metric-label">Allocated</div>
                                             <div className="mem-metric-value">
-                                                {backendResult ? backendResult.allocated : 0} / {processes.length}
+                                                {stepAllocatedCount} / {processes.length}
                                             </div>
                                         </div>
 
                                         <div className="mem-metric">
                                             <div className="mem-metric-label">Internal Frag.</div>
                                             <div className="mem-metric-value">
-                                                {backendResult ? backendResult.internalFragmentation : 0} KB
+                                                {stepInternalFrag} KB
                                             </div>
                                         </div>
 
                                         <div className="mem-metric">
                                             <div className="mem-metric-label">External Frag.</div>
                                             <div className="mem-metric-value">
-                                                {backendResult ? backendResult.externalFragmentation : 0} KB
+                                                {stepExternalFrag} KB
                                             </div>
                                         </div>
                                     </div>
@@ -757,10 +972,17 @@ function Memory_Management() {
                                                         type="button"
                                                         className={"mem-ctrl-btn" + (autoPlay ? " mem-ctrl-btn-active" : "")}
                                                         style={{ padding: "6px 12px", fontSize: "12px" }}
-                                                        disabled={currentTimeIndex >= activeTimeline.length - 1}
-                                                        onClick={function () { setAutoPlay(function (v) { return !v; }); }}
+                                                        disabled={false}
+                                                        onClick={function () {
+                                                            if (currentTimeIndex >= activeTimeline.length - 1) {
+                                                                setCurrentTimeIndex(0);
+                                                                setAutoPlay(true);
+                                                            } else {
+                                                                setAutoPlay(function (v) { return !v; });
+                                                            }
+                                                        }}
                                                     >
-                                                        {autoPlay ? "Pause" : "Auto-Play"}
+                                                        {autoPlay ? "Pause" : (currentTimeIndex >= activeTimeline.length - 1 ? "Replay" : "Auto-Play")}
                                                     </button>
 
                                                     <select
@@ -794,8 +1016,8 @@ function Memory_Management() {
                                         </div>
 
                                         <div className="mem-visual">
-                                            <div className="mem-stack">
-                                                {activeTimelineState.blocks.map(function (block, i) {
+                                            <div className={"mem-stack" + (isCompaction ? " compaction-mode" : "")}>
+                                                {activeTimelineState.blocks.filter(function (b) { return b.capacity > 0; }).map(function (block, i) {
                                                     const ci = block.processId ? (processColorMap.get(block.processId) ?? 0) : 0;
 
                                                     return (
@@ -804,9 +1026,11 @@ function Memory_Management() {
                                                             className={"mem-stack-block" + (block.processId ? "" : " free-block")}
                                                             style={{ flex: block.capacity, animationDelay: i * 0.06 + "s" }}
                                                         >
-                                                            <div className="mem-stack-block-label">
-                                                                {block.id} <span className="capacity-label">({block.capacity} KB)</span>
-                                                            </div>
+                                                            {!isCompaction && (
+                                                                <div className="mem-stack-block-label">
+                                                                    {block.id} <span className="capacity-label">({block.capacity} KB)</span>
+                                                                </div>
+                                                            )}
 
                                                             {block.processId ? (
                                                                 <div className={"mem-allocated-segment process-color-" + ci} style={{ height: (block.processSize / block.capacity) * 100 + "%" }}>
@@ -853,8 +1077,8 @@ function Memory_Management() {
                                                                 <td className="num-col">{a.processSize}</td>
                                                                 <td>{a.blockId}</td>
                                                                 <td className="num-col">{a.blockSize || "—"}</td>
-                                                                <td className="center-col" style={{ color: a.allocated ? "#3B7A6A" : "#a4b0b6", fontWeight: 600 }}>
-                                                                    {a.allocated ? "Allocated" : "Waiting"}
+                                                                <td className="center-col" style={{ color: a.status === "Allocated" ? "#3B7A6A" : a.status === "Completed" ? "#5b8def" : a.status === "Pending" ? "#c0c6cc" : "#d9a441", fontWeight: 600 }}>
+                                                                    {a.status}
                                                                 </td>
                                                             </tr>
                                                         );
@@ -863,152 +1087,6 @@ function Memory_Management() {
                                             </table>
                                         </div>
                                     </div>
-                                </div>
-                            </section>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {mainTab === "replacement" && (
-                <div className="mem-content">
-                    <aside className="mem-sidebar">
-                        <h3>Page Replacement</h3>
-                        {PAGE_ALGORITHMS.map(function (algo) {
-                            return (
-                                <button
-                                    type="button"
-                                    key={algo}
-                                    className={"mem-algo-card" + (pageAlgorithm === algo ? " selected" : "")}
-                                    onClick={function () {
-                                        setPageAlgorithm(algo);
-                                        setPageResult(null);
-                                    }}
-                                >
-                                    {algo}
-                                    <span className="algo-abbr">{algo}</span>
-                                </button>
-                            );
-                        })}
-                    </aside>
-
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "24px" }}>
-                        <section className="mem-task-manager">
-                            <div className="mem-task-header">
-                                <div>
-                                    <h2>Page Replacement</h2>
-                                    <p>Configure reference string and frame count</p>
-                                </div>
-
-                                <div className="mem-controls">
-                                    <button
-                                        type="button"
-                                        className="mem-ctrl-btn"
-                                        onClick={function () {
-                                            setPageString("7 0 1 2 0 3 0 4 2 3 0 3 2");
-                                            setFrameCount(3);
-                                            setPageResult(null);
-                                        }}
-                                    >
-                                        Sample
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="mem-ctrl-btn danger-btn"
-                                        onClick={function () {
-                                            setPageString("");
-                                            setFrameCount(3);
-                                            setPageResult(null);
-                                        }}
-                                    >
-                                        Clear
-                                    </button>
-
-                                    <button type="button" className="mem-ctrl-btn run-btn" onClick={runPageReplacement}>
-                                        Run
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="mem-task-form">
-                                <div className="mem-input-group">
-                                    <label>Reference String</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. 7 0 1 2 0 3"
-                                        value={pageString}
-                                        onChange={function (e) {
-                                            setPageString(e.target.value);
-                                            setPageResult(null);
-                                        }}
-                                    />
-                                </div>
-
-                                <div className="mem-input-group" style={{ maxWidth: "220px" }}>
-                                    <label>Frames</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        value={frameCount}
-                                        onChange={function (e) {
-                                            setFrameCount(Math.max(1, Number(e.target.value) || 1));
-                                            setPageResult(null);
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </section>
-
-                        {pageResult && (
-                            <section className="mem-results">
-                                <div className="mem-results-header">
-                                    <div>
-                                        <h2>Page Replacement Results</h2>
-                                        <p className="mem-results-algo-label">{pageResult.algorithm}</p>
-                                    </div>
-
-                                    <div className="mem-metrics">
-                                        <div className="mem-metric">
-                                            <div className="mem-metric-label">Page Faults</div>
-                                            <div className="mem-metric-value">{pageResult.totalPageFaults}</div>
-                                        </div>
-
-                                        <div className="mem-metric">
-                                            <div className="mem-metric-label">Hits</div>
-                                            <div className="mem-metric-value">{pageResult.totalHits}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mem-result-table-wrapper" style={{ marginTop: 0 }}>
-                                    <h3>Step-by-Step Overview</h3>
-                                    <table className="mem-result-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Step</th>
-                                                <th>Page</th>
-                                                <th>Frames</th>
-                                                <th>Status</th>
-                                                <th>Replaced</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {pageResult.steps.map(function (step) {
-                                                return (
-                                                    <tr key={step.step}>
-                                                        <td>{step.step}</td>
-                                                        <td>{step.page}</td>
-                                                        <td>{step.frames.map(function (frame) { return frame === null ? "—" : frame; }).join(" | ")}</td>
-                                                        <td style={{ color: step.pageFault ? "#d9534f" : "#3B7A6A", fontWeight: 700 }}>
-                                                            {step.pageFault ? "Page Fault" : "Hit"}
-                                                        </td>
-                                                        <td>{step.replacedPage === null ? "—" : step.replacedPage}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
                                 </div>
                             </section>
                         )}

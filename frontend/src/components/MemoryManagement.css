@@ -614,6 +614,35 @@
     gap: 4px;
 }
 
+.mem-stack.compaction-mode {
+    gap: 0;
+    padding: 12px;
+}
+
+.mem-stack.compaction-mode .mem-stack-block {
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.mem-stack.compaction-mode .mem-stack-block:last-child {
+    border-bottom: none;
+}
+
+.mem-stack.compaction-mode .mem-stack-block:first-child {
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+}
+
+.mem-stack.compaction-mode .mem-stack-block:last-child {
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.mem-stack.compaction-mode .mem-allocated-segment {
+    border-radius: 0;
+}
+
 .mem-stack-block {
     position: relative;
     border-radius: var(--radius-sm);

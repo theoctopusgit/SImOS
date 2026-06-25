@@ -15,7 +15,7 @@ def find_block(memory_blocks, process_size, algorithm, next_index):
     ]
 
     if not available:
-        return None, next_index
+        return None
 
     if algorithm == "Best Fit":
         return min(available, key=lambda x: x[1]["remaining"])
@@ -40,14 +40,24 @@ def solve_memory_management(
     scheduling_algorithm,
     compaction=False
 ):
-    memory_blocks = [
-        {
-            "id": b.id,
-            "size": b.size,
-            "remaining": b.size
-        }
-        for b in blocks
-    ]
+    if compaction:
+        total_size = sum(b.size for b in blocks)
+        memory_blocks = [
+            {
+                "id": "Compacted Memory",
+                "size": total_size,
+                "remaining": total_size
+            }
+        ]
+    else:
+        memory_blocks = [
+            {
+                "id": b.id,
+                "size": b.size,
+                "remaining": b.size
+            }
+            for b in blocks
+        ]
 
     ordered_processes = order_processes(processes, scheduling_algorithm)
 
@@ -67,48 +77,48 @@ def solve_memory_management(
             block_index, block = selected
             frag = block["remaining"] - process.size
 
-            allocations.append({
-                "process": process.id,
-                "size": process.size,
-                "block": block["id"],
-                "blockSize": block["size"],
-                "status": "Allocated",
-                "internalFragmentation": frag
-            })
-
-            total_internal += frag
-            block["remaining"] = 0
-            next_index = (block_index + 1) % len(memory_blocks)
-
-        else:
-            total_free = sum(b["remaining"] for b in memory_blocks)
-
-            if compaction and total_free >= process.size:
-                frag = total_free - process.size
-
+            if compaction:
                 allocations.append({
                     "process": process.id,
                     "size": process.size,
-                    "block": "Compacted Space",
-                    "blockSize": total_free,
+                    "block": block["id"],
+                    "blockSize": process.size,
                     "status": "Allocated",
-                    "internalFragmentation": frag
+                    "internalFragmentation": 0
                 })
 
-                total_internal += frag
+                block["remaining"] = 0
+                block["size"] = process.size
 
-                for b in memory_blocks:
-                    b["remaining"] = 0
-
+                if frag > 0:
+                    memory_blocks.insert(block_index + 1, {
+                        "id": f"{block['id']}'",
+                        "size": frag,
+                        "remaining": frag
+                    })
             else:
                 allocations.append({
                     "process": process.id,
                     "size": process.size,
-                    "block": None,
-                    "blockSize": None,
-                    "status": "Waiting",
-                    "internalFragmentation": 0
+                    "block": block["id"],
+                    "blockSize": block["size"],
+                    "status": "Allocated",
+                    "internalFragmentation": frag
                 })
+                total_internal += frag
+                block["remaining"] = 0
+
+            next_index = (block_index + 1) % len(memory_blocks)
+
+        else:
+            allocations.append({
+                "process": process.id,
+                "size": process.size,
+                "block": None,
+                "blockSize": None,
+                "status": "Waiting",
+                "internalFragmentation": 0
+            })
 
     external = 0 if compaction else sum(b["remaining"] for b in memory_blocks)
 
