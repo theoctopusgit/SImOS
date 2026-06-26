@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import IntroLogo from "./components/IntroLogo";
+import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
 import Home from "./components/Home";
 import About from "./components/About";
@@ -14,6 +15,7 @@ import "./App.css";
 function AppContent() {
   return (
     <div className="app-shell">
+      <ScrollToTop />
       <Navbar />
       <div className="app-page">
         <Routes>
