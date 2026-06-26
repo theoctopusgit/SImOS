@@ -36,7 +36,7 @@ function Navbar() {
         </div>
         <nav className="nav-links">
           <button type="button" onClick={() => window.open("https://github.com/RodneyGG/SImOS", "_blank")}>GitHub</button>
-          <button type="button">Docs</button>
+          <button type="button" onClick={() => goTo("/docs")}>Docs</button>
           <button type="button" onClick={() => goTo("/about")}>About</button>
           <button type="button" className="nav-theme-toggle">◐</button>
         </nav>

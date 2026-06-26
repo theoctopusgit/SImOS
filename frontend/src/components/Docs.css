@@ -1,0 +1,318 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap');
+
+:root {
+  --bg-page: #F7F9FA;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0f3f5;
+  --bg-inset: #eef1f4;
+  --bg-input: #f4f6f8;
+
+  --text-primary: #4A5559;
+  --text-heading: #3a4347;
+  --text-secondary: #7a8a90;
+  --text-muted: #a4b0b6;
+  --text-placeholder: #bcc5ca;
+
+  --accent: #3B7A6A;
+  --accent-light: #4a9a86;
+  --accent-lighter: #d0e8e1;
+  --accent-bg: rgba(59, 122, 106, 0.06);
+  --accent-bg-hover: rgba(59, 122, 106, 0.10);
+
+  --purple: #7c5cbf;
+  --purple-light: #9b7dd4;
+  --purple-bg: rgba(124, 92, 191, 0.06);
+  --purple-border: rgba(124, 92, 191, 0.18);
+
+  --border: #e4e9ec;
+  --border-light: #edf0f3;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 3px rgba(74, 85, 89, 0.04), 0 1px 2px rgba(74, 85, 89, 0.03);
+  --shadow-md: 0 4px 16px rgba(74, 85, 89, 0.06), 0 1px 4px rgba(74, 85, 89, 0.04);
+
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-med: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.docs-app {
+  min-height: 100vh;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  padding: 20px 24px 80px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* ── Hero ───────────────────────────────────────────── */
+
+.docs-hero {
+  text-align: center;
+  padding: 36px 0 28px;
+}
+
+.docs-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-lighter);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.docs-hero h1 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+  margin: 14px 0 8px;
+}
+
+.docs-hero p {
+  font-size: 15px;
+  color: var(--text-muted);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Table of contents ─────────────────────────────── */
+
+.docs-toc {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.docs-toc-link {
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+}
+
+.docs-toc-link:hover {
+  border-color: var(--accent-lighter);
+  background: var(--accent-bg);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ── Sections ───────────────────────────────────────── */
+
+.docs-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+  scroll-margin-top: 24px;
+}
+
+.docs-section h2 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+
+.docs-section-sub {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 18px;
+}
+
+.docs-section h3 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 26px 0 14px;
+}
+
+.docs-section h3:first-of-type {
+  margin-top: 4px;
+}
+
+/* ── Algorithm cards ────────────────────────────────── */
+
+.docs-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.docs-algo-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  padding: 16px 18px;
+  transition: var(--transition-fast);
+}
+
+.docs-algo-card:hover {
+  border-color: var(--accent-lighter);
+  background: var(--accent-bg);
+}
+
+.docs-algo-abbr {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.docs-algo-card h4 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0 0 6px;
+}
+
+.docs-algo-card p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Usage steps ────────────────────────────────────── */
+
+.docs-steps {
+  list-style: none;
+  counter-reset: docs-step;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+
+.docs-steps li {
+  counter-increment: docs-step;
+  position: relative;
+  padding-left: 38px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.docs-steps li::before {
+  content: counter(docs-step);
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-lighter);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.docs-steps strong {
+  color: var(--text-heading);
+}
+
+/* ── Note callout ───────────────────────────────────── */
+
+.docs-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--purple-bg);
+  border: 1px solid var(--purple-border);
+}
+
+.docs-note-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--purple);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  font-style: italic;
+  font-family: 'Outfit', serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.docs-note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.docs-note code {
+  background: rgba(124, 92, 191, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12.5px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  color: var(--purple);
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .docs-app {
+    padding: 16px 16px 60px;
+  }
+
+  .docs-hero h1 {
+    font-size: 26px;
+  }
+
+  .docs-section {
+    padding: 20px;
+  }
+
+  .docs-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

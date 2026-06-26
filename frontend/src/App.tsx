@@ -8,6 +8,7 @@ import CPU_Scheduling from "./components/CPU_Scheduling";
 import Memory_Management from "./components/MemoryManagement";
 import VirtualMemory from "./components/VirtualMemory";
 import DiskScheduling from "./components/DiskScheduling";
+import Docs from "./components/Docs";
 import "./App.css";
 
 function AppContent() {
@@ -22,6 +23,7 @@ function AppContent() {
           <Route path="/memory-management" element={<Memory_Management />} />
           <Route path="/virtual-memory" element={<VirtualMemory />} />
           <Route path="/mass-storage" element={<DiskScheduling />} />
+          <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
